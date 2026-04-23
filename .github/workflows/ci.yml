@@ -9,6 +9,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# --- Secrets expected -------------------------------------------------------
+# CONTRACT_READ_TOKEN: fine-grained PAT (or GitHub App token) with read-only
+#   access to the `PeakTek/resolvetrace-contract` repository. The default
+#   `GITHUB_TOKEN` cannot read other repositories in the org, so the two
+#   contract checkouts below pass this secret explicitly. Drop the secret
+#   once `resolvetrace-contract` is made public, or once the SDK is
+#   published to npm and the checkout steps are no longer needed.
+# ---------------------------------------------------------------------------
+
 jobs:
   web-vite-vanilla-ts:
     name: web/vite-vanilla-ts — typecheck + build
@@ -27,6 +36,7 @@ jobs:
         with:
           repository: PeakTek/resolvetrace-contract
           path: resolvetrace-contract
+          token: ${{ secrets.CONTRACT_READ_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -58,6 +68,7 @@ jobs:
         with:
           repository: PeakTek/resolvetrace-contract
           path: resolvetrace-contract
+          token: ${{ secrets.CONTRACT_READ_TOKEN }}
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
