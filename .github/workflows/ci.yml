@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout examples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: resolvetrace-examples
 
@@ -23,12 +23,12 @@ jobs:
       # as a sibling checkout so the Vite alias resolves. Remove this step
       # once `@peaktek/resolvetrace-sdk` is published.
       - name: Checkout contract (for SDK source)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: PeakTek/resolvetrace-contract
           path: resolvetrace-contract
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -49,21 +49,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout examples
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: resolvetrace-examples
 
       - name: Checkout contract (build context sibling)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: PeakTek/resolvetrace-contract
           path: resolvetrace-contract
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: resolvetrace-examples/web/vite-vanilla-ts/Dockerfile
