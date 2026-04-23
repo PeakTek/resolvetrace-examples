@@ -1,0 +1,31 @@
+# One-command local / cloud deploy for the Vite demo.
+#
+#   cd web/vite-vanilla-ts
+#   cp .env.example .env    # edit to point at your ingest server
+#   docker compose up --build
+#
+# The build context is the parent workspace (two levels up) because the
+# Dockerfile needs access to `resolvetrace-contract/sdk/typescript` for the
+# SDK source — until the SDK is published to npm, resolvetrace-contract
+# MUST be cloned as a sibling of resolvetrace-examples.
+
+services:
+  web-demo:
+    build:
+      # From web/vite-vanilla-ts/ → web/ → resolvetrace-examples/ → workspace
+      context: ../../..
+      dockerfile: resolvetrace-examples/web/vite-vanilla-ts/Dockerfile
+      args:
+        VITE_RT_ENDPOINT: ${VITE_RT_ENDPOINT:-http://localhost:4317}
+        VITE_RT_API_KEY: ${VITE_RT_API_KEY:-replace-me-with-long-random-string}
+    image: resolvetrace-example-vite-vanilla-ts:local
+    container_name: resolvetrace-web-demo
+    ports:
+      - "${DEMO_PORT:-8080}:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

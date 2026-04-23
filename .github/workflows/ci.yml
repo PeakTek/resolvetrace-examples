@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-vite-vanilla-ts:
+    name: web/vite-vanilla-ts — typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v4
+        with:
+          path: resolvetrace-examples
+
+      # The SDK is not on npm yet — pull its source from the contract repo
+      # as a sibling checkout so the Vite alias resolves. Remove this step
+      # once `@peaktek/resolvetrace-sdk` is published.
+      - name: Checkout contract (for SDK source)
+        uses: actions/checkout@v4
+        with:
+          repository: PeakTek/resolvetrace-contract
+          path: resolvetrace-contract
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        working-directory: resolvetrace-examples/web/vite-vanilla-ts
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: resolvetrace-examples/web/vite-vanilla-ts
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: resolvetrace-examples/web/vite-vanilla-ts
+        run: npm run build
+
+  docker:
+    name: web/vite-vanilla-ts — docker build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v4
+        with:
+          path: resolvetrace-examples
+
+      - name: Checkout contract (build context sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: PeakTek/resolvetrace-contract
+          path: resolvetrace-contract
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: resolvetrace-examples/web/vite-vanilla-ts/Dockerfile
+          push: false
+          tags: resolvetrace-examples-web-vite-vanilla-ts:ci

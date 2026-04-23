@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ResolveTrace SDK demo</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>ResolveTrace SDK demo</h1>
+        <p class="subtitle">
+          Browser client using
+          <code>@peaktek/resolvetrace-sdk</code>
+          against a local OSS ingest server.
+        </p>
+        <div class="config">
+          <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
+          <span><strong>API key:</strong> <code id="cfg-apikey">—</code></span>
+        </div>
+      </header>
+
+      <section class="actions">
+        <h2>Capture events</h2>
+        <div class="button-row">
+          <button id="btn-track-pageview">track('page_view')</button>
+          <button id="btn-track-click">track('demo.button_click')</button>
+          <button id="btn-capture-signup">capture(signup.completed)</button>
+          <button id="btn-capture-pii">capture(with PII payload)</button>
+        </div>
+        <p class="hint">
+          The "with PII" button sends an email and SIN inside the attribute bag —
+          the SDK's built-in Stage-1 scrubber redacts them before the request
+          leaves the browser.
+        </p>
+      </section>
+
+      <section class="actions">
+        <h2>Lifecycle</h2>
+        <div class="button-row">
+          <button id="btn-flush">flush()</button>
+          <button id="btn-diagnostics">getDiagnostics()</button>
+          <button id="btn-shutdown" class="danger">shutdown()</button>
+        </div>
+      </section>
+
+      <section class="diagnostics">
+        <h2>Diagnostics</h2>
+        <pre id="diag-box">(idle)</pre>
+      </section>
+
+      <section class="log">
+        <h2>Event log</h2>
+        <div id="log-box" class="log-box"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

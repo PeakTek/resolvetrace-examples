@@ -1,0 +1,35 @@
+# Evaluated relative to the build context (parent workspace that contains
+# both resolvetrace-examples/ and resolvetrace-contract/). We only want the
+# SDK source and this example's own files in the build.
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.svelte-kit
+**/.turbo
+**/.env
+**/.env.local
+**/*.log
+**/.git
+**/.github
+**/.vscode
+**/.idea
+**/.DS_Store
+**/Thumbs.db
+**/*.tsbuildinfo
+
+# Only keep the paths the Dockerfile actually copies. Explicitly exclude the
+# rest of resolvetrace-contract so a giant api-spec / conformance tree does
+# not balloon the build context.
+resolvetrace-contract/api-spec
+resolvetrace-contract/conformance
+resolvetrace-contract/schemas
+resolvetrace-contract/scripts
+resolvetrace-contract/sdk/python
+resolvetrace-contract/.github
+resolvetrace-contract/tests
+
+# Likewise, keep only the example we're building from the examples repo.
+resolvetrace-examples/.github
+resolvetrace-examples/CHANGELOG.md
+resolvetrace-examples/README.md
