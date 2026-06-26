@@ -37,6 +37,26 @@
       </section>
 
       <section class="actions">
+        <h2>Auto-capture triggers (Wave 21)</h2>
+        <div class="button-row">
+          <button id="btn-rage">Rage target (click me fast)</button>
+          <button id="btn-dead">Dead target (does nothing)</button>
+          <button id="btn-jserror">Throw JS error</button>
+          <button id="btn-fetch-fail">Failed fetch (404)</button>
+          <button id="btn-fetch-slow">Slow fetch</button>
+          <button id="btn-longtask">Long task (block 120ms)</button>
+        </div>
+        <form id="auto-form" class="button-row">
+          <input id="auto-input" type="text" placeholder="masked field" />
+          <button id="btn-submit" type="submit">Repeated submit</button>
+        </form>
+        <p class="hint">
+          These exercise the SDK's browser auto-capture sources: rage/dead
+          clicks, repeated submit, JS errors, failed/slow fetches, long tasks.
+        </p>
+      </section>
+
+      <section class="actions">
         <h2>Lifecycle</h2>
         <div class="button-row">
           <button id="btn-flush">flush()</button>

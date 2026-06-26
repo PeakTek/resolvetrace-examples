@@ -82,6 +82,9 @@ const rt = createClient({
   apiKey,
   endpoint,
   debug: true,
+  // Wave 21: enable browser auto-capture (frustration signals + error/network/
+  // perf breadcrumbs). Defaults are fine; we keep the master switch explicit.
+  autoCapture: true,
   onError(err) {
     log(`SDK transport error: ${err.message}`, 'error');
     renderDiagnostics(rt);
@@ -198,6 +201,75 @@ function disableCaptureButtons(): void {
     b.disabled = true;
   }
 }
+
+// --- Wave 21 auto-capture triggers -----------------------------------------
+// These drive the SDK's browser auto-capture sources so the portal timeline
+// has real frustration / error / network / perf breadcrumbs to render.
+
+const btnRage = $<HTMLButtonElement>('btn-rage');
+const btnDead = $<HTMLButtonElement>('btn-dead');
+const btnJsError = $<HTMLButtonElement>('btn-jserror');
+const btnFetchFail = $<HTMLButtonElement>('btn-fetch-fail');
+const btnFetchSlow = $<HTMLButtonElement>('btn-fetch-slow');
+const btnLongTask = $<HTMLButtonElement>('btn-longtask');
+const autoForm = $<HTMLFormElement>('auto-form');
+
+// Rage click: the SDK flags >=3 clicks on the same target within 1s. This
+// handler intentionally does nothing observable.
+btnRage.addEventListener('click', () => {
+  log('rage target clicked (click rapidly 3x+ to trigger ux.rage_click)');
+});
+
+// Dead click: an interactive target whose click produces no DOM mutation,
+// navigation, or network within the window (~2.5s) → ux.dead_click.
+btnDead.addEventListener('click', () => {
+  // Deliberately no DOM change / nav / fetch.
+});
+
+btnJsError.addEventListener('click', () => {
+  log('throwing uncaught error in 0ms (→ error.js)…', 'warn');
+  // Throw out of the current stack so it surfaces as window.onerror.
+  setTimeout(() => {
+    throw new TypeError('Demo: cannot read properties of undefined (reading "x")');
+  }, 0);
+});
+
+btnFetchFail.addEventListener('click', () => {
+  log('fetch → 404 (→ error.api)…', 'warn');
+  // A same-origin path that 404s; status >= threshold → error.api.
+  void fetch('/__demo_missing__/' + Date.now()).catch(() => {
+    /* swallow — the SDK records the outcome */
+  });
+});
+
+btnFetchSlow.addEventListener('click', () => {
+  log('slow fetch (~600ms, → perf.api_latency)…');
+  // httpbin-style delay via the ingest health endpoint won't be slow, so we
+  // hit a public delay endpoint. Falls back gracefully if offline.
+  const url = `${endpoint}/health?slow=${Date.now()}`;
+  const start = performance.now();
+  void (async () => {
+    // Artificially serialize a few requests so duration is measurable even
+    // against a fast local endpoint.
+    await fetch(url).catch(() => undefined);
+    log(`slow fetch returned in ${Math.round(performance.now() - start)}ms`);
+  })();
+});
+
+btnLongTask.addEventListener('click', () => {
+  log('blocking main thread ~120ms (→ perf.long_task)…');
+  const end = performance.now() + 120;
+  // Busy-wait to produce a Long Task (>50ms) the PerformanceObserver records.
+  while (performance.now() < end) {
+    // spin
+  }
+  log('long task done');
+});
+
+autoForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  log('form submitted (submit 2x+ within 3s → ux.repeated_submit)');
+});
 
 // Best-effort shutdown on tab close — flushes the final queue.
 window.addEventListener('beforeunload', () => {
