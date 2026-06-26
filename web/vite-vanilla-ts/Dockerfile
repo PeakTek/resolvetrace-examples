@@ -30,6 +30,16 @@ COPY resolvetrace-contract/sdk/typescript \
 COPY resolvetrace-examples/web/vite-vanilla-ts \
      /build/resolvetrace-examples/web/vite-vanilla-ts
 
+# The Vite build bundles the SDK from source (see the alias in vite.config.ts),
+# so the SDK's own runtime deps (e.g. rrweb, imported lazily) must be installed
+# in the SDK tree for the alias to resolve. Drop once the SDK ships from npm.
+WORKDIR /build/resolvetrace-contract/sdk/typescript
+RUN if [ -f package-lock.json ]; then \
+      npm ci --no-audit --no-fund; \
+    else \
+      npm install --no-audit --no-fund; \
+    fi
+
 WORKDIR /build/resolvetrace-examples/web/vite-vanilla-ts
 
 # Install deps. Use `npm ci` when a lockfile ships with the repo;

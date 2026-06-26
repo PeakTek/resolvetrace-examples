@@ -32,6 +32,13 @@ jobs:
         with:
           node-version: '20'
 
+      # The Vite alias bundles (and tsc type-checks) the SDK from source, which
+      # now has its own runtime deps (e.g. rrweb, lazily imported). Install them
+      # in the SDK checkout so the alias resolves. Drop once the SDK is on npm.
+      - name: Install SDK source deps
+        working-directory: resolvetrace-contract/sdk/typescript
+        run: npm ci --no-audit --no-fund
+
       - name: Install deps
         working-directory: resolvetrace-examples/web/vite-vanilla-ts
         run: npm install --no-audit --no-fund
