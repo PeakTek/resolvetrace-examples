@@ -87,7 +87,11 @@ const rt = createClient({
   // sets S3_PUBLIC_ENDPOINT=http://localhost:9000, so the server signs upload
   // URLs for a host the browser can reach (the server still talks to MinIO at
   // minio:9000 internally).
-  autoCapture: { replay: { enabled: true, sampleRate: 1 } },
+  //
+  // maskAllText:false keeps static page text (labels/headings/buttons) readable
+  // in replay; form INPUTS are still always masked. Tag any sensitive static
+  // text with `data-rt-mask` / `data-private` to mask it.
+  autoCapture: { replay: { enabled: true, sampleRate: 1, maskAllText: false } },
   onError(err) {
     log(`SDK transport error: ${err.message}`, 'error');
     renderDiagnostics(rt);
