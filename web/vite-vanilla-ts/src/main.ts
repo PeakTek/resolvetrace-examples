@@ -273,8 +273,21 @@ btnDead.addEventListener('click', () => {
   // Deliberately no DOM change / nav / fetch.
 });
 
+// Cap the JS-error demo at 2 throws — enough to show the error.js capture
+// without flooding the session timeline.
+const JS_ERROR_MAX = 2;
+let jsErrorCount = 0;
 btnJsError.addEventListener('click', () => {
-  log('throwing uncaught error in 0ms (→ error.js)…', 'warn');
+  if (jsErrorCount >= JS_ERROR_MAX) {
+    log(`JS-error demo capped at ${JS_ERROR_MAX} (reload to reset)`);
+    return;
+  }
+  jsErrorCount += 1;
+  log(`throwing uncaught error ${jsErrorCount}/${JS_ERROR_MAX} (→ error.js)…`, 'warn');
+  if (jsErrorCount >= JS_ERROR_MAX) {
+    btnJsError.disabled = true;
+    btnJsError.textContent = 'Throw JS error (capped)';
+  }
   // Throw out of the current stack so it surfaces as window.onerror.
   setTimeout(() => {
     throw new TypeError('Demo: cannot read properties of undefined (reading "x")');
