@@ -82,9 +82,12 @@ const rt = createClient({
   apiKey,
   endpoint,
   debug: true,
-  // Wave 21: enable browser auto-capture (frustration signals + error/network/
-  // perf breadcrumbs). Defaults are fine; we keep the master switch explicit.
-  autoCapture: true,
+  // Browser auto-capture: frustration signals + error/network/perf breadcrumbs,
+  // plus masked session replay. Replay upload works locally because the stack
+  // sets S3_PUBLIC_ENDPOINT=http://localhost:9000, so the server signs upload
+  // URLs for a host the browser can reach (the server still talks to MinIO at
+  // minio:9000 internally).
+  autoCapture: { replay: { enabled: true, sampleRate: 1 } },
   onError(err) {
     log(`SDK transport error: ${err.message}`, 'error');
     renderDiagnostics(rt);
@@ -102,6 +105,46 @@ const bootId = rt.track('page_view', {
 });
 log(`track('page_view') → ${bootId}`);
 renderDiagnostics(rt);
+
+// --- Support code, report, replay ------------------------------------------
+
+const supportCodeEl = $('support-code');
+const btnCopyCode = $<HTMLButtonElement>('btn-copy-code');
+const btnReport = $<HTMLButtonElement>('btn-report');
+
+// The server mints the support code on session start; the SDK exposes it on
+// `rt.session.supportCode` once the start response resolves (null until then).
+const supportCodePoll = window.setInterval(() => {
+  const code = rt.session.supportCode;
+  if (code) {
+    supportCodeEl.textContent = code;
+    log(`support code ready: ${code} (look it up in the portal)`, 'success');
+    window.clearInterval(supportCodePoll);
+  }
+}, 500);
+
+btnCopyCode.addEventListener('click', () => {
+  const code = rt.session.supportCode;
+  if (!code) {
+    log('no support code yet — interact with the page first', 'warn');
+    return;
+  }
+  void navigator.clipboard?.writeText(code).then(
+    () => log(`copied support code ${code}`),
+    () => log('clipboard unavailable; the code is shown above', 'warn'),
+  );
+});
+
+btnReport.addEventListener('click', () => {
+  const id = rt.reportProblem({
+    description: 'Checkout button did nothing after I clicked Pay (demo report).',
+  });
+  log(
+    `reportProblem() → ${id} — support.report_submitted; see portal → Reports`,
+    'success',
+  );
+  renderDiagnostics(rt);
+});
 
 // --- Button handlers -------------------------------------------------------
 

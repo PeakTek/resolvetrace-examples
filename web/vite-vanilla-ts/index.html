@@ -22,6 +22,24 @@
       </header>
 
       <section class="actions">
+        <h2>Support code &amp; replay</h2>
+        <div class="button-row">
+          <span><strong>Support code:</strong>
+            <code id="support-code">(starting session…)</code></span>
+          <button id="btn-copy-code">Copy</button>
+          <button id="btn-report">Report a problem</button>
+        </div>
+        <p class="hint">
+          The server mints a per-session <strong>support code</strong> on session
+          start — share it, then look it up in the portal. "Report a problem"
+          sends a <code>support.report_submitted</code> event (carrying the code)
+          → portal <em>Reports</em>. <strong>Replay</strong> is recording; chunks
+          upload every ~5s of activity and on session end (Shutdown), then appear
+          on the session's detail page in the portal.
+        </p>
+      </section>
+
+      <section class="actions">
         <h2>Capture events</h2>
         <div class="button-row">
           <button id="btn-track-pageview">track('page_view')</button>
