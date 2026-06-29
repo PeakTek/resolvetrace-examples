@@ -282,10 +282,12 @@ btnJsError.addEventListener('click', () => {
 });
 
 btnFetchFail.addEventListener('click', () => {
-  log('fetch → 404 (→ error.api)…', 'warn');
-  // A same-origin path that 404s; status >= threshold → error.api.
-  void fetch('/__demo_missing__/' + Date.now()).catch(() => {
-    /* swallow — the SDK records the outcome */
+  log('failed API call (→ error.api)…', 'warn');
+  // Same-origin paths get SPA-fallback'd to index.html (200) and never 404,
+  // so hit the ingest API instead — an unknown path returns a real 4xx (401
+  // without the SDK's bearer) that the api source records as error.api.
+  void fetch(`${endpoint}/__demo_missing__/${Date.now()}`).catch(() => {
+    /* swallow — the SDK's api source records the error.api outcome */
   });
 });
 
@@ -318,7 +320,19 @@ autoForm.addEventListener('submit', (e) => {
   log('form submitted (submit 2x+ within 3s → ux.repeated_submit)');
 });
 
-// Best-effort shutdown on tab close — flushes the final queue.
-window.addEventListener('beforeunload', () => {
-  void rt.shutdown({ timeoutMs: 250 });
+// Best-effort final flush when the page is hidden or closed — WITHOUT ending
+// the session, so a plain refresh resumes the same session (and its support
+// code) while a real tab-close still yields a fresh session (the browser
+// clears sessionStorage on close). `keepalive` lets the request outlive the
+// page and, unlike sendBeacon, still carries the Authorization header. We use
+// `pagehide` (more reliable than `beforeunload` under the bfcache) plus
+// `visibilitychange→hidden` (covers tab-switch / mobile backgrounding).
+// Explicit teardown is the Shutdown button (`rt.shutdown()`), which ends the
+// session so the next load starts fresh.
+const flushOnHide = (): void => {
+  void rt.flush({ keepalive: true });
+};
+window.addEventListener('pagehide', flushOnHide);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushOnHide();
 });
