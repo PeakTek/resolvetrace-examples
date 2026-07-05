@@ -1,15 +1,51 @@
 # web/vite-vanilla-ts
 
 Browser demo that drives `@peaktek/resolvetrace-sdk` against a ResolveTrace
-OSS ingest server. Vanilla TypeScript, Vite tooling, no frontend framework —
+ingest server. Vanilla TypeScript, Vite tooling, no frontend framework —
 intended as the **smallest possible reference** for "SDK → ingest server".
 
+**One demo, every backend.** On load it probes the deployment's capabilities
+(`GET /api/capabilities`, fail-closed to OSS) and adapts: against a self-hosted
+open-source server it shows the baseline surface; against a **ResolveTrace
+Platform** server it additionally activates the consent-gated replay flow.
+Platform/Enterprise-only sections are badged; baseline features are not.
+
 ## What it demonstrates
+
+Baseline (works on the self-hosted OSS build):
 
 - Creating a client with `createClient({ apiKey, endpoint })`
 - `track(name, attrs)` and `capture({ type, attributes })` — the two main capture entry points
 - `flush()`, `shutdown()`, `getDiagnostics()` — lifecycle + observability
 - The built-in Stage-1 scrubber redacting PII before the batch leaves the browser
+- Whole-session masked replay (`autoCapture.replay.mode: 'auto'`) + an on/off toggle
+
+Badged **Platform** (active only against a Platform backend; teasers otherwise):
+
+- Consent-gated **manual** replay — a demo-local consent banner + headless
+  Grant/Withdraw driving the public `client.replay.start()/stop()` primitives,
+  with replay upload verdicts shown live (`201` accepted vs
+  `403 consent_required`)
+- A small operator panel — read/switch the tenant's replay mode and list
+  consent records
+
+## Deployment tiers &amp; the `/api` contract
+
+The Platform sections call a small, same-origin `/api/*` contract that the
+**hosting deployment provides** when the demo is served against ResolveTrace
+Platform (its implementation is not part of this example):
+
+| Route | Purpose |
+|---|---|
+| `GET /api/capabilities` | `{ tier, consent }` — drives which sections activate |
+| `POST /api/consent` | record a consent decision for the current session |
+| `GET`/`PUT /api/replay-mode` | read / set the demo tenant's replay mode |
+| `GET /api/consent-records` | list recorded consent decisions |
+
+Against a plain OSS server none of these exist; the probe fails closed and the
+Platform sections render as availability teasers. The demo carries no tier or
+consent logic of its own — it only exercises public SDK primitives plus this
+deployment-provided contract.
 
 ## Prerequisites
 

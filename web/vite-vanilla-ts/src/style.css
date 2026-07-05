@@ -182,3 +182,123 @@ pre {
   margin-right: 0.5rem;
   font-weight: 600;
 }
+
+/* --- Tier badges + gated sections ---------------------------------------- */
+
+.tier {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  vertical-align: middle;
+  border: 1px solid var(--border);
+  color: var(--fg-dim);
+}
+.tier-platform {
+  color: #0a0e13;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tier-enterprise {
+  color: #0a0e13;
+  background: #c084fc;
+  border-color: #c084fc;
+}
+
+.badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  vertical-align: middle;
+  color: #0a0e13;
+  background: var(--accent);
+}
+.badge-ent {
+  background: #c084fc;
+}
+
+/* OSS backend: platform sections shown as availability teasers. */
+.is-teaser {
+  opacity: 0.6;
+}
+.teaser-note {
+  display: none;
+  color: var(--warn);
+}
+.is-teaser .teaser-note {
+  display: block;
+}
+.is-teaser .platform-note {
+  display: none;
+}
+.is-teaser .consent-prompt,
+.is-teaser .verdict-panel,
+.is-teaser .records {
+  display: none;
+}
+
+label.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--border);
+}
+
+.consent-prompt {
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  background: rgba(94, 184, 255, 0.08);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+}
+
+.verdict-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.5rem 0 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+.verdict {
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+.verdict.ok {
+  color: var(--success);
+  background: rgba(74, 222, 128, 0.08);
+}
+.verdict.deny {
+  color: var(--error);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.records {
+  margin: 0.25rem 0 0;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+.record {
+  padding: 0.15rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

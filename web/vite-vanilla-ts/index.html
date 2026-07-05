@@ -9,11 +9,12 @@
   <body>
     <main>
       <header>
-        <h1>ResolveTrace SDK demo</h1>
+        <h1>ResolveTrace SDK demo <span id="tier-badge" class="tier tier-oss">…</span></h1>
         <p class="subtitle">
-          Browser client using
-          <code>@peaktek/resolvetrace-sdk</code>
-          against a local OSS ingest server.
+          One browser client (<code>@peaktek/resolvetrace-sdk</code>) against any
+          ResolveTrace backend. Baseline features work on the self-hosted OSS
+          build; sections badged <span class="badge">Platform</span> /
+          <span class="badge badge-ent">Enterprise</span> need a managed backend.
         </p>
         <div class="config">
           <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
@@ -22,7 +23,7 @@
       </header>
 
       <section class="actions">
-        <h2>Support code &amp; replay</h2>
+        <h2>Support code &amp; report</h2>
         <div class="button-row">
           <span><strong>Support code:</strong>
             <code id="support-code">(starting session…)</code></span>
@@ -33,9 +34,25 @@
           The server mints a per-session <strong>support code</strong> on session
           start — share it, then look it up in the portal. "Report a problem"
           sends a <code>support.report_submitted</code> event (carrying the code)
-          → portal <em>Reports</em>. <strong>Replay</strong> is recording; chunks
-          upload every ~5s of activity and on session end (Shutdown), then appear
-          on the session's detail page in the portal.
+          → portal <em>Reports</em>.
+        </p>
+      </section>
+
+      <section class="actions">
+        <h2>Session replay</h2>
+        <div class="button-row">
+          <label class="toggle">
+            <input type="checkbox" id="chk-replay-enabled" />
+            Record replay (whole session)
+          </label>
+          <span>mode: <code id="replay-mode">—</code></span>
+        </div>
+        <p class="hint">
+          Masked session replay. In <code>auto</code> mode the whole session is
+          recorded (all-or-nothing); form inputs are always masked, static text
+          stays readable. Chunks upload every ~5s of activity and appear on the
+          session's portal detail page. Toggling reloads (the policy resolves
+          when the client is created).
         </p>
       </section>
 
@@ -55,7 +72,7 @@
       </section>
 
       <section class="actions">
-        <h2>Auto-capture triggers (Wave 21)</h2>
+        <h2>Auto-capture triggers</h2>
         <div class="button-row">
           <button id="btn-rage">Rage target (click me fast)</button>
           <button id="btn-dead">Dead target (does nothing)</button>
@@ -71,6 +88,65 @@
         <p class="hint">
           These exercise the SDK's browser auto-capture sources: rage/dead
           clicks, repeated submit, JS errors, failed/slow fetches, long tasks.
+        </p>
+      </section>
+
+      <section class="actions is-platform" id="sec-consent" hidden>
+        <h2>Consent-gated replay <span class="badge">Platform</span></h2>
+        <div class="button-row consent-prompt" id="consent-prompt">
+          <span>Allow session replay recording to help support you?</span>
+          <button id="btn-consent-allow">Allow</button>
+          <button id="btn-consent-decline" class="secondary">No thanks</button>
+        </div>
+        <div class="button-row">
+          <button id="btn-consent-grant">Grant (headless API)</button>
+          <button id="btn-consent-withdraw" class="danger">Withdraw</button>
+          <button id="btn-consent-reset" class="secondary">Reset</button>
+        </div>
+        <p class="hint">
+          consent: <code id="consent-state">unknown</code> · session
+          <code id="consent-session">—</code>
+        </p>
+        <div id="verdict-panel" class="verdict-panel"></div>
+        <p class="hint teaser-note">
+          Available on <strong>ResolveTrace Platform</strong> — this demo is
+          running against an OSS backend, which is all-or-nothing.
+        </p>
+        <p class="hint platform-note">
+          In <code>manual</code> mode the server admits replay chunks only for
+          sessions with recorded end-user consent. Grant → uploads succeed
+          (<code>201</code>); no consent / withdrawn →
+          <code>403 consent_required</code>. A fresh grant admits uploads within
+          ~5s (server verdict cache); withdraw stops recording immediately.
+        </p>
+      </section>
+
+      <section class="actions is-platform" id="sec-operator" hidden>
+        <h2>Tenant replay policy <span class="badge">Platform</span></h2>
+        <div class="button-row">
+          <span>mode: <code id="op-mode">—</code></span>
+          <button id="btn-op-auto">auto</button>
+          <button id="btn-op-manual">manual</button>
+          <button id="btn-op-off">off</button>
+          <button id="btn-op-refresh" class="secondary">Refresh records</button>
+        </div>
+        <div id="op-records" class="records">(no consent records yet)</div>
+        <p class="hint teaser-note">
+          Available on <strong>ResolveTrace Platform</strong>.
+        </p>
+        <p class="hint platform-note">
+          Server enforcement follows the tenant's mode live; this page's client
+          stays a <code>manual</code> client until reload. Operator actions here
+          affect only the demo tenant.
+        </p>
+      </section>
+
+      <section class="actions is-enterprise" id="sec-enterprise">
+        <h2>Enterprise <span class="badge badge-ent">Enterprise</span></h2>
+        <p class="hint">
+          Dedicated per-customer isolation, SSO / SAML, and audit export are
+          coming to <strong>ResolveTrace Enterprise</strong>. Not part of this
+          demo.
         </p>
       </section>
 
