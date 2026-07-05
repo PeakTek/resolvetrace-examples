@@ -23,6 +23,12 @@ export default defineConfig({
       '@peaktek/resolvetrace-sdk': sdkSrc,
     },
   },
+  // The entry module awaits a capability probe at top level (one build serves
+  // both OSS and Platform backends). Target a baseline that supports top-level
+  // await + ES2022 — all current evergreen browsers.
+  build: {
+    target: 'es2022',
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

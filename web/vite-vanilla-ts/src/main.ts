@@ -1,22 +1,22 @@
 /**
  * ResolveTrace SDK browser demo.
  *
- * Creates a single client against a locally-running OSS ingest server and
- * exposes a handful of buttons that exercise the public SDK surface:
- *   - `track(name, attrs)`
- *   - `capture({ type, attributes })`
- *   - `flush()`
- *   - `getDiagnostics()`
- *   - `shutdown()`
+ * One demo, every backend. It probes the deployment's capabilities and adapts:
+ * against an open-source (self-hosted) server it shows the baseline surface
+ * (capture, sessions, whole-session masked replay, report widget); against a
+ * ResolveTrace Platform server it additionally activates the consent-gated
+ * replay flow + a small operator panel. Platform/Enterprise-only sections are
+ * badged; baseline features are not.
  *
  * Configuration comes from Vite env (`VITE_RT_ENDPOINT` / `VITE_RT_API_KEY`)
  * with defaults that match `resolvetrace-core`'s `deploy/docker-compose.yml`.
  */
 
 import { createClient, type ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
+import { probeCapabilities, type Capabilities } from './capabilities';
+import { activatePlatformSections } from './platform';
 
-const endpoint =
-  import.meta.env.VITE_RT_ENDPOINT ?? 'http://localhost:4317';
+const endpoint = import.meta.env.VITE_RT_ENDPOINT ?? 'http://localhost:4317';
 const apiKey =
   import.meta.env.VITE_RT_API_KEY ?? 'replace-me-with-long-random-string';
 
@@ -30,16 +30,9 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
 
 const cfgEndpoint = $('cfg-endpoint');
 const cfgApiKey = $('cfg-apikey');
+const tierBadge = $('tier-badge');
 const diagBox = $<HTMLPreElement>('diag-box');
 const logBox = $('log-box');
-
-const btnTrackPageView = $<HTMLButtonElement>('btn-track-pageview');
-const btnTrackClick = $<HTMLButtonElement>('btn-track-click');
-const btnCaptureSignup = $<HTMLButtonElement>('btn-capture-signup');
-const btnCapturePii = $<HTMLButtonElement>('btn-capture-pii');
-const btnFlush = $<HTMLButtonElement>('btn-flush');
-const btnDiagnostics = $<HTMLButtonElement>('btn-diagnostics');
-const btnShutdown = $<HTMLButtonElement>('btn-shutdown');
 
 cfgEndpoint.textContent = endpoint;
 cfgApiKey.textContent = redactKey(apiKey);
@@ -51,18 +44,14 @@ type LogLevel = 'info' | 'success' | 'warn' | 'error';
 function log(message: string, level: LogLevel = 'info'): void {
   const line = document.createElement('div');
   line.className = `log-line ${level}`;
-
   const time = document.createElement('span');
   time.className = 'log-time';
   time.textContent = new Date().toLocaleTimeString();
-
   const tag = document.createElement('span');
   tag.className = 'log-level';
   tag.textContent = level.toUpperCase();
-
   const text = document.createElement('span');
   text.textContent = message;
-
   line.append(time, tag, text);
   logBox.prepend(line);
 }
@@ -76,22 +65,85 @@ function redactKey(key: string): string {
   return `${key.slice(0, 4)}••••${key.slice(-2)}`;
 }
 
+// --- Capability probe (fail-closed to OSS) ---------------------------------
+
+const caps: Capabilities = await probeCapabilities();
+tierBadge.textContent =
+  caps.tier === 'platform'
+    ? 'Platform'
+    : caps.tier === 'enterprise'
+      ? 'Enterprise'
+      : 'OSS';
+tierBadge.className = `tier tier-${caps.tier}`;
+log(`deployment tier: ${caps.tier}${caps.consent ? ' (consent-gated replay)' : ''}`);
+
+// --- Inspecting transport --------------------------------------------------
+// Wrap the SDK's fetch so replay upload verdicts are visible — especially the
+// managed 403 upload_denied (reason: consent_required). Purely observational.
+
+const inspectingFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init);
+  try {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    if (url.includes('/v1/replay/')) {
+      const leg = url.includes('signed-url')
+        ? 'signed-url'
+        : url.includes('complete')
+          ? 'complete'
+          : 'replay';
+      let reason: string | undefined;
+      if (!res.ok) {
+        const b = (await res.clone().json().catch(() => null)) as
+          | { reason?: string; error?: string }
+          | null;
+        reason = b?.reason ?? b?.error;
+      }
+      const ok = res.ok;
+      log(
+        `replay ${leg}: ${res.status}${reason ? ` (${reason})` : ''}`,
+        ok ? 'success' : 'warn',
+      );
+      document.dispatchEvent(
+        new CustomEvent('rt:replay-verdict', {
+          detail: { leg, status: res.status, reason },
+        }),
+      );
+    }
+  } catch {
+    /* never break the transport over instrumentation */
+  }
+  return res;
+};
+
 // --- Client ----------------------------------------------------------------
+
+// Baseline replay is all-or-nothing ('auto' records the whole session; the SDK
+// also defines 'off' and 'manual'). Against a Platform backend the deployment
+// gates recording on consent, so the client runs in 'manual' and the consent
+// section below drives replay.start()/stop(). maskAllText:false keeps static
+// page text readable in replay; form INPUTS are always masked.
+const replayMode = caps.consent ? 'manual' : 'auto';
+const replayEnabled =
+  (localStorage.getItem('demo.replay.enabled') ?? 'true') === 'true';
 
 const rt = createClient({
   apiKey,
   endpoint,
   debug: true,
-  // Browser auto-capture: frustration signals + error/network/perf breadcrumbs,
-  // plus masked session replay. Replay upload works locally because the stack
-  // sets S3_PUBLIC_ENDPOINT=http://localhost:9000, so the server signs upload
-  // URLs for a host the browser can reach (the server still talks to MinIO at
-  // minio:9000 internally).
-  //
-  // maskAllText:false keeps static page text (labels/headings/buttons) readable
-  // in replay; form INPUTS are still always masked. Tag any sensitive static
-  // text with `data-rt-mask` / `data-private` to mask it.
-  autoCapture: { replay: { enabled: true, sampleRate: 1, maskAllText: false } },
+  transport: inspectingFetch,
+  autoCapture: {
+    replay: {
+      mode: replayMode,
+      enabled: replayEnabled,
+      sampleRate: 1,
+      maskAllText: false,
+    },
+  },
   onError(err) {
     log(`SDK transport error: ${err.message}`, 'error');
     renderDiagnostics(rt);
@@ -101,7 +153,6 @@ const rt = createClient({
 log(`Client created. Endpoint: ${endpoint}`, 'success');
 renderDiagnostics(rt);
 
-// Auto-emit a page_view on load so there is always something in the queue.
 const bootId = rt.track('page_view', {
   path: window.location.pathname,
   referrer: document.referrer || null,
@@ -110,14 +161,27 @@ const bootId = rt.track('page_view', {
 log(`track('page_view') → ${bootId}`);
 renderDiagnostics(rt);
 
-// --- Support code, report, replay ------------------------------------------
+// --- Session replay (baseline) ---------------------------------------------
+
+const replayModeEl = $('replay-mode');
+const chkReplay = $<HTMLInputElement>('chk-replay-enabled');
+replayModeEl.textContent = replayMode;
+chkReplay.checked = replayEnabled;
+chkReplay.addEventListener('change', () => {
+  localStorage.setItem('demo.replay.enabled', String(chkReplay.checked));
+  log(
+    `replay ${chkReplay.checked ? 'enabled' : 'disabled'} — reloading to apply (policy resolves at client creation)`,
+    'warn',
+  );
+  window.setTimeout(() => location.reload(), 400);
+});
+
+// --- Support code + report -------------------------------------------------
 
 const supportCodeEl = $('support-code');
 const btnCopyCode = $<HTMLButtonElement>('btn-copy-code');
 const btnReport = $<HTMLButtonElement>('btn-report');
 
-// The server mints the support code on session start; the SDK exposes it on
-// `rt.session.supportCode` once the start response resolves (null until then).
 const supportCodePoll = window.setInterval(() => {
   const code = rt.session.supportCode;
   if (code) {
@@ -143,20 +207,22 @@ btnReport.addEventListener('click', () => {
   const id = rt.reportProblem({
     description: 'Checkout button did nothing after I clicked Pay (demo report).',
   });
-  log(
-    `reportProblem() → ${id} — support.report_submitted; see portal → Reports`,
-    'success',
-  );
+  log(`reportProblem() → ${id} — support.report_submitted; see portal → Reports`, 'success');
   renderDiagnostics(rt);
 });
 
-// --- Button handlers -------------------------------------------------------
+// --- Capture buttons -------------------------------------------------------
+
+const btnTrackPageView = $<HTMLButtonElement>('btn-track-pageview');
+const btnTrackClick = $<HTMLButtonElement>('btn-track-click');
+const btnCaptureSignup = $<HTMLButtonElement>('btn-capture-signup');
+const btnCapturePii = $<HTMLButtonElement>('btn-capture-pii');
+const btnFlush = $<HTMLButtonElement>('btn-flush');
+const btnDiagnostics = $<HTMLButtonElement>('btn-diagnostics');
+const btnShutdown = $<HTMLButtonElement>('btn-shutdown');
 
 btnTrackPageView.addEventListener('click', () => {
-  const id = rt.track('page_view', {
-    path: window.location.pathname,
-    trigger: 'manual',
-  });
+  const id = rt.track('page_view', { path: window.location.pathname, trigger: 'manual' });
   log(`track('page_view') → ${id}`);
   renderDiagnostics(rt);
 });
@@ -173,11 +239,7 @@ btnTrackClick.addEventListener('click', () => {
 btnCaptureSignup.addEventListener('click', () => {
   const id = rt.capture({
     type: 'app.signup.completed',
-    attributes: {
-      plan: 'pro',
-      source: 'web-demo',
-      referrer: document.referrer || 'direct',
-    },
+    attributes: { plan: 'pro', source: 'web-demo', referrer: document.referrer || 'direct' },
   });
   log(`capture('app.signup.completed') → ${id}`);
   renderDiagnostics(rt);
@@ -187,7 +249,6 @@ btnCapturePii.addEventListener('click', () => {
   const id = rt.capture({
     type: 'demo.pii_payload',
     attributes: {
-      // Stage-1 scrubber should redact these before the request leaves.
       email: 'user.person@example.com',
       sin: '046-454-286',
       note: 'Reach me at 416-555-0199.',
@@ -226,32 +287,17 @@ btnShutdown.addEventListener('click', async () => {
   try {
     await rt.shutdown();
     log('shutdown() complete. Further capture() calls will be dropped.', 'warn');
-    disableCaptureButtons();
+    for (const b of [btnTrackPageView, btnTrackClick, btnCaptureSignup, btnCapturePii, btnFlush]) {
+      b.disabled = true;
+    }
   } catch (err) {
-    log(
-      `shutdown() failed: ${err instanceof Error ? err.message : String(err)}`,
-      'error',
-    );
+    log(`shutdown() failed: ${err instanceof Error ? err.message : String(err)}`, 'error');
   } finally {
     renderDiagnostics(rt);
   }
 });
 
-function disableCaptureButtons(): void {
-  for (const b of [
-    btnTrackPageView,
-    btnTrackClick,
-    btnCaptureSignup,
-    btnCapturePii,
-    btnFlush,
-  ]) {
-    b.disabled = true;
-  }
-}
-
 // --- Wave 21 auto-capture triggers -----------------------------------------
-// These drive the SDK's browser auto-capture sources so the portal timeline
-// has real frustration / error / network / perf breadcrumbs to render.
 
 const btnRage = $<HTMLButtonElement>('btn-rage');
 const btnDead = $<HTMLButtonElement>('btn-dead');
@@ -261,74 +307,63 @@ const btnFetchSlow = $<HTMLButtonElement>('btn-fetch-slow');
 const btnLongTask = $<HTMLButtonElement>('btn-longtask');
 const autoForm = $<HTMLFormElement>('auto-form');
 
-// Rage click: the SDK flags >=3 clicks on the same target within 1s. This
-// handler intentionally does nothing observable.
 btnRage.addEventListener('click', () => {
   log('rage target clicked (click rapidly 3x+ to trigger ux.rage_click)');
 });
-
-// Dead click: an interactive target whose click produces no DOM mutation,
-// navigation, or network within the window (~2.5s) → ux.dead_click.
 btnDead.addEventListener('click', () => {
-  // Deliberately no DOM change / nav / fetch.
+  /* Deliberately no DOM change / nav / fetch → ux.dead_click. */
 });
-
 btnJsError.addEventListener('click', () => {
   log('throwing uncaught error in 0ms (→ error.js)…', 'warn');
-  // Throw out of the current stack so it surfaces as window.onerror.
   setTimeout(() => {
     throw new TypeError('Demo: cannot read properties of undefined (reading "x")');
   }, 0);
 });
-
 btnFetchFail.addEventListener('click', () => {
   log('failed API call (→ error.api)…', 'warn');
-  // Same-origin paths get SPA-fallback'd to index.html (200) and never 404,
-  // so hit the ingest API instead — an unknown path returns a real 4xx (401
-  // without the SDK's bearer) that the api source records as error.api.
   void fetch(`${endpoint}/__demo_missing__/${Date.now()}`).catch(() => {
     /* swallow — the SDK's api source records the error.api outcome */
   });
 });
-
 btnFetchSlow.addEventListener('click', () => {
   log('slow fetch (~600ms, → perf.api_latency)…');
-  // httpbin-style delay via the ingest health endpoint won't be slow, so we
-  // hit a public delay endpoint. Falls back gracefully if offline.
   const url = `${endpoint}/health?slow=${Date.now()}`;
   const start = performance.now();
   void (async () => {
-    // Artificially serialize a few requests so duration is measurable even
-    // against a fast local endpoint.
     await fetch(url).catch(() => undefined);
     log(`slow fetch returned in ${Math.round(performance.now() - start)}ms`);
   })();
 });
-
 btnLongTask.addEventListener('click', () => {
   log('blocking main thread ~120ms (→ perf.long_task)…');
   const end = performance.now() + 120;
-  // Busy-wait to produce a Long Task (>50ms) the PerformanceObserver records.
   while (performance.now() < end) {
-    // spin
+    /* spin */
   }
   log('long task done');
 });
-
 autoForm.addEventListener('submit', (e) => {
   e.preventDefault();
   log('form submitted (submit 2x+ within 3s → ux.repeated_submit)');
 });
 
-// Best-effort final flush when the page is hidden or closed — WITHOUT ending
-// the session, so a plain refresh resumes the same session (and its support
-// code) while a real tab-close still yields a fresh session (the browser
-// clears sessionStorage on close). `keepalive` lets the request outlive the
-// page and, unlike sendBeacon, still carries the Authorization header. We use
-// `pagehide` (more reliable than `beforeunload` under the bfcache) plus
-// `visibilitychange→hidden` (covers tab-switch / mobile backgrounding).
-// Explicit teardown is the Shutdown button (`rt.shutdown()`), which ends the
-// session so the next load starts fresh.
+// --- Tier-gated sections ---------------------------------------------------
+
+if (caps.consent) {
+  activatePlatformSections(rt, log);
+  log('consent-gated replay active — use the "Consent-gated replay" section', 'success');
+} else {
+  // OSS backend: show the Platform sections as availability teasers.
+  for (const id of ['sec-consent', 'sec-operator']) {
+    const sec = $(id);
+    sec.hidden = false;
+    sec.classList.add('is-teaser');
+    sec.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  }
+}
+
+// --- Best-effort flush on hide (keep the session across a refresh) ----------
+
 const flushOnHide = (): void => {
   void rt.flush({ keepalive: true });
 };
