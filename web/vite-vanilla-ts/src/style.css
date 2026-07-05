@@ -302,3 +302,46 @@ button.secondary:hover:not(:disabled) {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* --- View tabs (OSS features / Platform features) ------------------------ */
+
+nav.views {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+nav.views button {
+  background: transparent;
+  color: var(--fg-dim);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.5rem 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+nav.views button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--fg);
+}
+nav.views button.active {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.teaser-banner {
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.5rem;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid var(--warn);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+#view-oss > section:last-child,
+#view-platform > section:last-child {
+  margin-bottom: 2.5rem;
+}
