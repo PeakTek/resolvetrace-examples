@@ -15,6 +15,7 @@
  */
 
 import type { ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
+import { rawFetch } from './raw-fetch';
 
 export type Logger = (
   msg: string,
@@ -43,7 +44,9 @@ interface ApiResult {
 }
 
 async function api(path: string, init?: RequestInit): Promise<ApiResult> {
-  const res = await fetch(`/api${path}`, {
+  // rawFetch (pre-wrap) so these demo /api calls don't add API-call breadcrumbs
+  // to the session being demonstrated.
+  const res = await rawFetch(`/api${path}`, {
     ...init,
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
   });

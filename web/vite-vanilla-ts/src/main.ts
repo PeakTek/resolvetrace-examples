@@ -15,6 +15,7 @@
 import { createClient, type ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
 import { probeCapabilities, type Capabilities } from './capabilities';
 import { activatePlatformSections } from './platform';
+import { rawFetch } from './raw-fetch';
 
 const endpoint = import.meta.env.VITE_RT_ENDPOINT ?? 'http://localhost:4317';
 const apiKey =
@@ -82,7 +83,9 @@ log(`deployment tier: ${caps.tier}${caps.consent ? ' (consent-gated replay)' : '
 // managed 403 upload_denied (reason: consent_required). Purely observational.
 
 const inspectingFetch: typeof fetch = async (input, init) => {
-  const res = await fetch(input, init);
+  // rawFetch (pre-wrap) so the SDK's own uploads aren't re-captured as
+  // perf.api_latency breadcrumbs (which would feed back into the queue).
+  const res = await rawFetch(input, init);
   try {
     const url =
       typeof input === 'string'
@@ -347,20 +350,39 @@ autoForm.addEventListener('submit', (e) => {
   log('form submitted (submit 2x+ within 3s → ux.repeated_submit)');
 });
 
-// --- Tier-gated sections ---------------------------------------------------
+// --- View navigation (OSS features / Platform features) --------------------
+
+const viewOss = $('view-oss');
+const viewPlatform = $('view-platform');
+const navOss = $<HTMLButtonElement>('nav-oss');
+const navPlatform = $<HTMLButtonElement>('nav-platform');
+
+function showView(v: 'oss' | 'platform'): void {
+  viewOss.hidden = v !== 'oss';
+  viewPlatform.hidden = v !== 'platform';
+  navOss.classList.toggle('active', v === 'oss');
+  navPlatform.classList.toggle('active', v === 'platform');
+}
+navOss.addEventListener('click', () => showView('oss'));
+navPlatform.addEventListener('click', () => showView('platform'));
+
+// --- Platform-tier activation ----------------------------------------------
 
 if (caps.consent) {
   activatePlatformSections(rt, log);
-  log('consent-gated replay active — use the "Consent-gated replay" section', 'success');
+  log('consent-gated replay active — see the Platform features tab', 'success');
 } else {
-  // OSS backend: show the Platform sections as availability teasers.
+  // OSS backend: the Platform tab shows availability teasers.
+  $('platform-teaser-banner').hidden = false;
   for (const id of ['sec-consent', 'sec-operator']) {
     const sec = $(id);
-    sec.hidden = false;
     sec.classList.add('is-teaser');
     sec.querySelectorAll('button').forEach((b) => (b.disabled = true));
   }
 }
+
+// Land on the tab that matches the backend.
+showView(caps.consent ? 'platform' : 'oss');
 
 // --- Best-effort flush on hide (keep the session across a refresh) ----------
 
