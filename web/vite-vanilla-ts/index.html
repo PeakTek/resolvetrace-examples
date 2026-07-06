@@ -183,6 +183,10 @@
       </section>
     </main>
 
+    <!-- Runtime config, written from container env at startup (see config.ts).
+         Loaded before the module so window.__RT_CONFIG__ is set synchronously.
+         In `npm run dev` this is the dev placeholder from /public/config.js. -->
+    <script src="/config.js"></script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

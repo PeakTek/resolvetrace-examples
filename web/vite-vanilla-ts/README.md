@@ -109,18 +109,26 @@ DEMO_PORT=9000 docker compose up --build
 
 ## Configuration
 
-Two build-time Vite env vars drive the demo. Defaults match
-`resolvetrace-core`'s docker-compose stack, so the zero-config path works
-out of the box against a local OSS install.
+The demo reads its config at **runtime**, not build time — the image bakes
+nothing environment-specific. Each hosting container writes a `config.js` from
+its own env at startup (setting `window.__RT_CONFIG__`, loaded before the app),
+so the same image runs against any ingest server. Defaults match
+`resolvetrace-core`'s docker-compose stack, so the zero-config path works out of
+the box.
 
 | Var | Default | Purpose |
 |---|---|---|
-| `VITE_RT_ENDPOINT` | `http://localhost:4317` | Ingest server base URL. |
-| `VITE_RT_API_KEY` | `replace-me-with-long-random-string` | Bearer token. Must match `OSS_API_KEY` on the server. |
+| `RT_INGEST_ENDPOINT` | `http://localhost:4317` | Ingest server base URL. |
+| `RT_PUBLIC_TENANT_KEY` | `replace-me-with-long-random-string` | events:write-only key, browser-exposed by design. Must match a key the server accepts. |
 
-For local dev (`npm run dev`): put values in `.env.local`.
-For Docker: put values in a `.env` next to `docker-compose.yml`, or pass
-them via `--build-arg` on `docker build`.
+For Docker: set them in a `.env` next to `docker-compose.yml` (they become
+container env). For local dev (`npm run dev`): Vite serves the placeholder
+`public/config.js` — edit its values, or just run against a local OSS server on
+`localhost:4317`.
+
+> On a managed (ResolveTrace Platform) deployment the backend mints a
+> short-lived events:write key **per visitor**, so `RT_PUBLIC_TENANT_KEY` is
+> omitted there and the app requests a fresh key at startup.
 
 ## Verifying events reach the server
 

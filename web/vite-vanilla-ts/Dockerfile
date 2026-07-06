@@ -1,30 +1,30 @@
 # syntax=docker/dockerfile:1.6
 #
-# Multi-stage build for the Vite vanilla-TS example.
+# Multi-stage build for the Vite vanilla-TS example (the OSS demo image).
+#
+# The image is environment-agnostic: no endpoint/key is baked. At startup the
+# runtime server (serve.mjs) writes `config.js` from container env
+# (RT_INGEST_ENDPOINT + RT_PUBLIC_TENANT_KEY), so the SAME image runs against
+# any deployment — nothing built per host.
 #
 # Build context MUST be the parent directory that contains BOTH
-# `resolvetrace-examples/` and `resolvetrace-contract/` side-by-side.
-# The companion `docker-compose.yml` sets this up automatically; the
-# raw CLI equivalent is:
+# `resolvetrace-examples/` and `resolvetrace-contract/` side-by-side (the Vite
+# build bundles the SDK from source). The companion `docker-compose.yml` sets
+# this up automatically; the raw CLI equivalent is:
 #
 #   cd <parent-of-both-repos>
 #   docker build \
 #     -f resolvetrace-examples/web/vite-vanilla-ts/Dockerfile \
-#     --build-arg VITE_RT_ENDPOINT=http://my-ingest:4317 \
-#     --build-arg VITE_RT_API_KEY=... \
 #     -t resolvetrace-web-demo .
 #
-# Once `@peaktek/resolvetrace-sdk` is published to npm, the sibling
-# checkout of resolvetrace-contract is no longer needed — drop the
-# COPY of that tree and switch the example's package.json to a real
-# dependency.
+# Once `@peaktek/resolvetrace-sdk` is published to npm, drop the COPY of the
+# contract tree and switch the example's package.json to a real dependency.
 
 # ---- Stage 1: build -------------------------------------------------------
 FROM node:20-bookworm-slim AS builder
 WORKDIR /build
 
-# Copy only what the Vite build actually needs. See `.dockerignore` for
-# the exclusions that keep this context lean.
+# Copy only what the Vite build needs. See `.dockerignore` for the exclusions.
 COPY resolvetrace-contract/sdk/typescript \
      /build/resolvetrace-contract/sdk/typescript
 COPY resolvetrace-examples/web/vite-vanilla-ts \
@@ -34,44 +34,35 @@ COPY resolvetrace-examples/web/vite-vanilla-ts \
 # so the SDK's own runtime deps (e.g. rrweb, imported lazily) must be installed
 # in the SDK tree for the alias to resolve. Drop once the SDK ships from npm.
 WORKDIR /build/resolvetrace-contract/sdk/typescript
-RUN if [ -f package-lock.json ]; then \
-      npm ci --no-audit --no-fund; \
-    else \
-      npm install --no-audit --no-fund; \
-    fi
+RUN if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; \
+    else npm install --no-audit --no-fund; fi
 
 WORKDIR /build/resolvetrace-examples/web/vite-vanilla-ts
+RUN if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; \
+    else npm install --no-audit --no-fund; fi
 
-# Install deps. Use `npm ci` when a lockfile ships with the repo;
-# `npm install` is the fallback so the scaffold builds out of the box.
-RUN if [ -f package-lock.json ]; then \
-      npm ci --no-audit --no-fund; \
-    else \
-      npm install --no-audit --no-fund; \
-    fi
-
-# Vite inlines `import.meta.env.VITE_*` at build time. Override via
-# --build-arg at `docker build` time.
-ARG VITE_RT_ENDPOINT=http://localhost:4317
-ARG VITE_RT_API_KEY=replace-me-with-long-random-string
-ENV VITE_RT_ENDPOINT=${VITE_RT_ENDPOINT}
-ENV VITE_RT_API_KEY=${VITE_RT_API_KEY}
-
+# No VITE_* build args: the demo reads its endpoint + key at runtime from
+# config.js (written by serve.mjs from container env), so nothing
+# environment-specific is baked here.
 RUN npm run build
 
-# ---- Stage 2: runtime (static) --------------------------------------------
-FROM nginx:1.27-alpine AS runtime
+# ---- Stage 2: runtime (node static server) --------------------------------
+FROM node:20-bookworm-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
 
-COPY resolvetrace-examples/web/vite-vanilla-ts/nginx.conf \
-     /etc/nginx/conf.d/default.conf
-
+COPY resolvetrace-examples/web/vite-vanilla-ts/serve.mjs ./serve.mjs
 COPY --from=builder \
      /build/resolvetrace-examples/web/vite-vanilla-ts/dist \
-     /usr/share/nginx/html
+     /app/public
 
+# serve.mjs writes /app/public/config.js from env at startup, so USER node must
+# own that tree. A plain `RUN chown/chmod` works on BOTH the classic and
+# BuildKit builders (unlike `COPY --chmod`, which needs BuildKit).
+RUN chown -R node:node /app && chmod 0644 serve.mjs
+
+USER node
 EXPOSE 8080
-
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://127.0.0.1:8080/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+  CMD node -e "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "serve.mjs"]
