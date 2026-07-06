@@ -8,18 +8,26 @@
  * replay flow + a small operator panel. Platform/Enterprise-only sections are
  * badged; baseline features are not.
  *
- * Configuration comes from Vite env (`VITE_RT_ENDPOINT` / `VITE_RT_API_KEY`)
- * with defaults that match `resolvetrace-core`'s `deploy/docker-compose.yml`.
+ * Configuration is read at startup from `window.__RT_CONFIG__` (a `config.js`
+ * the hosting container writes from its env), so the built bundle bakes no
+ * endpoint or key — one image runs against any environment. The OSS demo ships
+ * a static events:write key in that config; the managed demo omits it and the
+ * client mints a short-lived key per visitor (see `config.ts`). Falls back to
+ * defaults matching `resolvetrace-core`'s `deploy/docker-compose.yml`.
  */
 
 import { createClient, type ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
 import { probeCapabilities, type Capabilities } from './capabilities';
 import { activatePlatformSections } from './platform';
 import { rawFetch } from './raw-fetch';
+import { resolveRuntimeConfig } from './config';
 
-const endpoint = import.meta.env.VITE_RT_ENDPOINT ?? 'http://localhost:4317';
-const apiKey =
-  import.meta.env.VITE_RT_API_KEY ?? 'replace-me-with-long-random-string';
+const { endpoint, apiKey, mintKey } = await resolveRuntimeConfig();
+
+// The key the SDK's requests are sent with. Starts as the initial key; on the
+// managed demo it may be rotated by the inspecting transport (below) when a
+// short-lived minted key expires.
+let currentKey = apiKey;
 
 // --- UI refs ---------------------------------------------------------------
 
@@ -80,19 +88,57 @@ log(`deployment tier: ${caps.tier}${caps.consent ? ' (consent-gated replay)' : '
 
 // --- Inspecting transport --------------------------------------------------
 // Wrap the SDK's fetch so replay upload verdicts are visible — especially the
-// managed 403 upload_denied (reason: consent_required). Purely observational.
+// managed 403 upload_denied (reason: consent_required). Purely observational,
+// with one active concern: it keeps the Authorization header on the *current*
+// key. On the managed demo the per-visitor key is short-lived, so on a 401 we
+// mint a fresh one and retry once — the SDK bakes the key at creation, and
+// stamping it here lets a rotated key take effect without recreating the client.
+
+const urlOf = (input: RequestInfo | URL): string =>
+  typeof input === 'string'
+    ? input
+    : input instanceof URL
+      ? input.href
+      : input.url;
+
+const isIngestCall = (url: string): boolean =>
+  url.includes('/v1/events') ||
+  url.includes('/v1/session/') ||
+  url.includes('/v1/replay/');
+
+/** Reissue `init` with the current key stamped over any Authorization header. */
+const withCurrentKey = (init?: RequestInit): RequestInit | undefined => {
+  if (!currentKey || !init) return init;
+  const headers = new Headers(init.headers);
+  if (headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${currentKey}`);
+  }
+  return { ...init, headers };
+};
 
 const inspectingFetch: typeof fetch = async (input, init) => {
+  const url = urlOf(input);
+
   // rawFetch (pre-wrap) so the SDK's own uploads aren't re-captured as
   // perf.api_latency breadcrumbs (which would feed back into the queue).
-  const res = await rawFetch(input, init);
+  let res = await rawFetch(input, withCurrentKey(init));
+
+  // Managed demo: a short-lived minted key can expire mid-session. Mint a fresh
+  // one and retry the ingest/replay call once.
+  if (res.status === 401 && mintKey && isIngestCall(url)) {
+    try {
+      currentKey = await mintKey();
+      log('session key expired — minted a fresh one', 'info');
+      res = await rawFetch(input, withCurrentKey(init));
+    } catch (err) {
+      log(
+        `session-key re-mint failed: ${err instanceof Error ? err.message : String(err)}`,
+        'warn',
+      );
+    }
+  }
+
   try {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
     if (url.includes('/v1/replay/')) {
       const leg = url.includes('signed-url')
         ? 'signed-url'

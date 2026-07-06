@@ -9,7 +9,22 @@ top-level grouping instead.
 
 ## [Unreleased]
 
-*No changes yet.*
+### Changed
+- **Runtime configuration.** The demo now reads its endpoint + key at runtime
+  from `window.__RT_CONFIG__` (a `config.js` the hosting container writes from
+  its env at startup) instead of build-time `VITE_RT_*` inlining. The same image
+  runs against any environment — nothing environment-specific is baked. Env vars
+  are now `RT_INGEST_ENDPOINT` / `RT_PUBLIC_TENANT_KEY` (container env, not build
+  args).
+- The Docker image serves via a small dependency-free Node static server
+  (`serve.mjs`) that writes `config.js` from env and serves the build (replacing
+  the nginx runtime stage).
+
+### Added
+- Managed (ResolveTrace Platform) support: when the injected config carries no
+  key, the app requests a short-lived, `events:write`-only key per visitor from
+  the hosting backend (`POST /api/session-key`) and rotates it on expiry — so a
+  browser-exposed key is short-lived rather than static.
 
 ## [2026-06-28] — web/vite-vanilla-ts v0.2.0
 

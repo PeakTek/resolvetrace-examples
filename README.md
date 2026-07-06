@@ -55,9 +55,10 @@ cd web/vite-vanilla-ts
 docker compose up --build    # http://localhost:8080
 ```
 
-Set `VITE_RT_ENDPOINT` / `VITE_RT_API_KEY` in a `.env` next to the
-compose file to point at your actual ingest server — defaults target a
-local `resolvetrace-core` stack on `localhost:4317`.
+Set `RT_INGEST_ENDPOINT` / `RT_PUBLIC_TENANT_KEY` in a `.env` next to the
+compose file to point at your actual ingest server — they become container env
+(read at runtime, nothing baked at build). Defaults target a local
+`resolvetrace-core` stack on `localhost:4317`.
 
 ## SDK source resolution
 
