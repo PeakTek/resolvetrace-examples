@@ -17,7 +17,11 @@ export type Tier = 'oss' | 'platform' | 'enterprise';
 
 export interface Capabilities {
   tier: Tier;
-  /** Consent-gated manual replay is available + enforced server-side. */
+  /**
+   * Backend supports + enforces consent-gated manual replay (a Platform
+   * capability). The demo reads this to pick its SDK replay `mode` (see
+   * `main.ts`) — it does not change how the SDK itself works.
+   */
   consent: boolean;
 }
 

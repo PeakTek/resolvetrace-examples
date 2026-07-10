@@ -10,6 +10,13 @@ open-source server it shows the baseline surface; against a **ResolveTrace
 Platform** server it additionally activates the consent-gated replay flow.
 Platform/Enterprise-only sections are badged; baseline features are not.
 
+Because it targets both, the demo derives its SDK replay `mode` from that probe
+— `manual` against Platform (consent-gated), `auto` against OSS. A real
+single-backend app would just hardcode the mode it needs; `manual` is a
+**Platform-only** capability. (This is the SDK's host-set `autoCapture.replay.mode`
+— distinct from the operator panel's *tenant replay policy*, a server-side
+setting the `/api/replay-mode` route reads/writes.)
+
 ## What it demonstrates
 
 Baseline (works on the self-hosted OSS build):
