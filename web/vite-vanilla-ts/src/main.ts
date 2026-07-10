@@ -172,10 +172,13 @@ const inspectingFetch: typeof fetch = async (input, init) => {
 // --- Client ----------------------------------------------------------------
 
 // Baseline replay is all-or-nothing ('auto' records the whole session; the SDK
-// also defines 'off' and 'manual'). Against a Platform backend the deployment
-// gates recording on consent, so the client runs in 'manual' and the consent
-// section below drives replay.start()/stop(). maskAllText:false keeps static
-// page text readable in replay; form INPUTS are always masked.
+// also defines 'off' and 'manual'). The SDK replay mode is the APP's choice:
+// this one universal demo derives it from the detected backend — 'manual'
+// against ResolveTrace Platform (which supports consent-gated replay; the
+// consent section below obtains consent and drives replay.start()/stop()),
+// else 'auto'. A real single-backend app just hardcodes the mode it needs —
+// 'manual' is a Platform-only capability. maskAllText:false keeps static page
+// text readable in replay; form INPUTS are always masked.
 const replayMode = caps.consent ? 'manual' : 'auto';
 const replayEnabled =
   (localStorage.getItem('demo.replay.enabled') ?? 'true') === 'true';
