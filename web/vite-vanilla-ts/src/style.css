@@ -432,6 +432,57 @@ button.secondary:hover:not(:disabled) {
   font-size: 0.9rem;
   margin-top: 0;
 }
+
+/* Buyer-facing value callout. */
+.why-panel {
+  margin: 0.5rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  background: rgba(94, 184, 255, 0.08);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.is-teaser .why-panel {
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.demo-controls {
+  margin: 0.75rem 0 0.25rem;
+}
+#btn-guided-demo {
+  font-weight: 600;
+}
+
+/* Guided-tour narration banner. */
+.tour-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: rgba(94, 184, 255, 0.1);
+  font-size: 0.9rem;
+}
+.tour-step {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0a0e13;
+  background: var(--accent);
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.tour-msg {
+  color: var(--fg);
+}
 .mini-head {
   font-size: 0.78rem;
   font-weight: 600;

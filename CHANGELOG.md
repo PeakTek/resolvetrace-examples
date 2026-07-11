@@ -23,6 +23,12 @@ top-level grouping instead.
   **Record replay** (Start ⇄ Stop, driving `replay.start()/stop()`) — plus a live
   status line, so the enforcement gap is visible: recording while consent is
   withdrawn yields `403 consent_required`; allowing flips it to `201`.
+- **Guided demo on the Platform page.** A one-click **Run guided demo** auto-drives
+  the enforcement story in ~30s (allow + record → `201`; withdraw while recording
+  → `403 consent_required`; re-allow → `201`), narrated step-by-step and paced by
+  the server's actual verdicts. Adds a buyer-facing "why this matters" callout
+  (data-plane enforcement, auditable, GDPR/CCPA/PIPEDA) and a **Reset demo**
+  button for a clean slate between runs.
 
 ### Removed
 - The **Enterprise** teaser section (SSO/SAML, dedicated isolation, audit export)
