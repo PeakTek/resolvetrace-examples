@@ -10,11 +10,6 @@ import { $ } from './shared';
 
 const caps = await probeCapabilities();
 
-const badge = $('tier-badge');
-const isPlatform = caps.tier === 'platform';
-badge.textContent = isPlatform ? 'Platform' : 'OSS';
-badge.className = `tier tier-${isPlatform ? 'platform' : 'oss'}`;
-
 const endpointEl = document.getElementById('cfg-endpoint');
 if (endpointEl) {
   endpointEl.textContent = String(window.__RT_CONFIG__?.endpoint ?? '—');
