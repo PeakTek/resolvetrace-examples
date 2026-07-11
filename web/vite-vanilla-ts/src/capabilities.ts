@@ -19,8 +19,8 @@ export interface Capabilities {
   tier: Tier;
   /**
    * Backend supports + enforces consent-gated manual replay (a Platform
-   * capability). The demo reads this to pick its SDK replay `mode` (see
-   * `main.ts`) — it does not change how the SDK itself works.
+   * capability). The landing page badges it and the Platform page (`platform.ts`)
+   * reads it to activate its controls — it does not change how the SDK works.
    */
   consent: boolean;
 }

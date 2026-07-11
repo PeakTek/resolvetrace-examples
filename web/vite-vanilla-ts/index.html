@@ -9,184 +9,97 @@
   <body>
     <main>
       <header>
-        <h1>ResolveTrace SDK demo <span id="tier-badge" class="tier tier-oss">…</span></h1>
+        <h1>
+          ResolveTrace SDK demo
+          <span id="tier-badge" class="tier tier-oss">…</span>
+        </h1>
         <p class="subtitle">
           One browser client (<code>@peaktek/resolvetrace-sdk</code>) against any
-          ResolveTrace backend. The <strong>OSS features</strong> tab works on the
-          self-hosted build; the <strong>Platform features</strong> tab needs a
-          managed (ResolveTrace Platform) backend.
+          ResolveTrace backend. Pick a surface to explore — the
+          <strong>OSS features</strong> work on the self-hosted build;
+          <strong>Platform features</strong> need a managed (ResolveTrace
+          Platform) backend.
         </p>
         <div class="config">
           <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
-          <span><strong>API key:</strong> <code id="cfg-apikey">—</code></span>
         </div>
-        <nav class="views">
-          <button id="nav-oss" class="active">OSS features</button>
-          <button id="nav-platform">
-            Platform features <span class="badge">Platform</span>
-          </button>
-        </nav>
       </header>
 
-      <!-- ============================ OSS view ============================ -->
-      <div id="view-oss">
-        <section class="actions">
-          <h2>Support code &amp; report</h2>
-          <div class="button-row">
-            <span><strong>Support code:</strong>
-              <code id="support-code">(starting session…)</code></span>
-            <button id="btn-copy-code">Copy</button>
-            <button id="btn-report">Report a problem</button>
+      <section class="cards">
+        <a class="card" id="card-oss" href="/oss.html">
+          <div class="card-head">
+            <h2>OSS features</h2>
+            <span class="tier tier-oss">OSS</span>
           </div>
-          <p class="hint">
-            The server mints a per-session <strong>support code</strong> on session
-            start — share it, then look it up in the portal. "Report a problem"
-            sends a <code>support.report_submitted</code> event (carrying the code)
-            → portal <em>Reports</em>.
+          <p>
+            The baseline SDK surface on the self-hosted open-source build:
+            <code>track</code> / <code>capture</code>, PII scrubbing, lifecycle,
+            browser auto-capture, per-session support code, and whole-session
+            masked replay.
           </p>
-        </section>
+          <span class="card-cta">Open OSS demo →</span>
+        </a>
 
-        <section class="actions">
-          <h2>Session replay</h2>
-          <div class="button-row">
-            <label class="toggle">
-              <input type="checkbox" id="chk-replay-enabled" />
-              Record replay (whole session)
-            </label>
-            <span>mode: <code id="replay-mode">—</code></span>
+        <a class="card" id="card-platform" href="/platform.html">
+          <div class="card-head">
+            <h2>Platform features</h2>
+            <span class="tier tier-platform">Platform</span>
           </div>
-          <p class="hint">
-            Masked session replay. In <code>auto</code> mode the whole session is
-            recorded (all-or-nothing); form inputs are always masked, static text
-            stays readable. Chunks upload every ~5s of activity and appear on the
-            session's portal detail page. Toggling reloads (the policy resolves
-            when the client is created).
+          <p>
+            The managed differentiators: <strong>consent-gated replay</strong>
+            with live server verdicts (201 accepted vs 403 consent_required) and
+            an <strong>operator panel</strong> for the tenant's replay policy +
+            consent records.
           </p>
-        </section>
-
-        <section class="actions">
-          <h2>Capture events</h2>
-          <div class="button-row">
-            <button id="btn-track-pageview">track('page_view')</button>
-            <button id="btn-track-click">track('demo.button_click')</button>
-            <button id="btn-capture-signup">capture(signup.completed)</button>
-            <button id="btn-capture-pii">capture(with PII payload)</button>
-          </div>
-          <p class="hint">
-            The "with PII" button sends an email and SIN inside the attribute bag —
-            the SDK's built-in Stage-1 scrubber redacts them before the request
-            leaves the browser.
-          </p>
-        </section>
-
-        <section class="actions">
-          <h2>Auto-capture triggers</h2>
-          <div class="button-row">
-            <button id="btn-rage">Rage target (click me fast)</button>
-            <button id="btn-dead">Dead target (does nothing)</button>
-            <button id="btn-jserror">Throw JS error</button>
-            <button id="btn-fetch-fail">Failed API call (4xx)</button>
-            <button id="btn-fetch-slow">Slow fetch</button>
-            <button id="btn-longtask">Long task (block 120ms)</button>
-          </div>
-          <form id="auto-form" class="button-row">
-            <input id="auto-input" type="text" placeholder="masked field" />
-            <button id="btn-submit" type="submit">Repeated submit</button>
-          </form>
-          <p class="hint">
-            These exercise the SDK's browser auto-capture sources: rage/dead
-            clicks, repeated submit, JS errors, failed/slow fetches, long tasks.
-          </p>
-        </section>
-
-        <section class="actions">
-          <h2>Lifecycle</h2>
-          <div class="button-row">
-            <button id="btn-flush">flush()</button>
-            <button id="btn-diagnostics">getDiagnostics()</button>
-            <button id="btn-shutdown" class="danger">shutdown()</button>
-          </div>
-        </section>
-      </div>
-
-      <!-- ========================= Platform view ========================= -->
-      <div id="view-platform" hidden>
-        <div class="teaser-banner" id="platform-teaser-banner" hidden>
-          This demo is running against an <strong>OSS backend</strong>, so the
-          sections below are previews. Deploy it against
-          <strong>ResolveTrace Platform</strong> to enable consent-gated replay
-          + the operator controls.
-        </div>
-
-        <section class="actions is-platform" id="sec-consent">
-          <h2>Consent-gated replay <span class="badge">Platform</span></h2>
-          <div class="button-row consent-prompt" id="consent-prompt">
-            <span>Allow session replay recording to help support you?</span>
-            <button id="btn-consent-allow">Allow</button>
-            <button id="btn-consent-decline" class="secondary">No thanks</button>
-          </div>
-          <div class="button-row">
-            <button id="btn-consent-grant">Grant (headless API)</button>
-            <button id="btn-consent-withdraw" class="danger">Withdraw</button>
-            <button id="btn-consent-reset" class="secondary">Reset</button>
-          </div>
-          <p class="hint">
-            consent: <code id="consent-state">unknown</code> · session
-            <code id="consent-session">—</code>
-          </p>
-          <div id="verdict-panel" class="verdict-panel"></div>
-          <p class="hint platform-note">
-            In <code>manual</code> mode the server admits replay chunks only for
-            sessions with recorded end-user consent. Grant → uploads succeed
-            (<code>201</code>); no consent / withdrawn →
-            <code>403 consent_required</code>. A fresh grant admits uploads within
-            ~5s (server verdict cache); withdraw stops recording immediately.
-          </p>
-        </section>
-
-        <section class="actions is-platform" id="sec-operator">
-          <h2>Tenant replay policy <span class="badge">Platform</span></h2>
-          <div class="button-row">
-            <span>mode: <code id="op-mode">—</code></span>
-            <button id="btn-op-auto">auto</button>
-            <button id="btn-op-manual">manual</button>
-            <button id="btn-op-off">off</button>
-            <button id="btn-op-refresh" class="secondary">Refresh records</button>
-          </div>
-          <div id="op-records" class="records">(no consent records yet)</div>
-          <p class="hint platform-note">
-            Server enforcement follows the tenant's mode live; this page's client
-            stays a <code>manual</code> client until reload. Operator actions here
-            affect only the demo tenant.
-          </p>
-        </section>
-
-        <section class="actions is-enterprise" id="sec-enterprise">
-          <h2>Enterprise <span class="badge badge-ent">Enterprise</span></h2>
-          <p class="hint">
-            Dedicated per-customer isolation, SSO / SAML, and audit export are
-            coming to <strong>ResolveTrace Enterprise</strong>. Not part of this
-            demo.
-          </p>
-        </section>
-      </div>
-
-      <!-- =========================== shared footer ======================= -->
-      <section class="diagnostics">
-        <h2>Diagnostics</h2>
-        <pre id="diag-box">(idle)</pre>
+          <span class="availability" id="platform-availability">…</span>
+          <span class="card-cta">Open Platform demo →</span>
+        </a>
       </section>
 
-      <section class="log">
-        <h2>Event log</h2>
-        <div id="log-box" class="log-box"></div>
+      <section class="actions">
+        <h2>What's the difference?</h2>
+        <div class="compare">
+          <table>
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>OSS (self-hosted)</th>
+                <th>Platform (managed)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Capture, scrubbing, lifecycle, auto-capture</td>
+                <td>✓</td>
+                <td>✓</td>
+              </tr>
+              <tr>
+                <td>Masked session replay</td>
+                <td>whole-session (<code>auto</code>)</td>
+                <td>consent-gated (<code>manual</code>)</td>
+              </tr>
+              <tr>
+                <td>Server admits replay only with recorded consent</td>
+                <td>—</td>
+                <td>✓ enforced in the data plane</td>
+              </tr>
+              <tr>
+                <td>Operator controls (tenant replay policy, consent audit)</td>
+                <td>—</td>
+                <td>✓</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">
+          This same build serves both surfaces and adapts at runtime: it probes
+          <code>GET /api/capabilities</code> (fail-closed to OSS), so the Platform
+          page degrades to disabled previews against a plain OSS backend.
+        </p>
       </section>
     </main>
 
-    <!-- Runtime config, written from container env at startup (see config.ts).
-         Loaded before the module so window.__RT_CONFIG__ is set synchronously.
-         In `npm run dev` this is the dev placeholder from /public/config.js. -->
     <script src="/config.js"></script>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/entry.ts"></script>
   </body>
 </html>

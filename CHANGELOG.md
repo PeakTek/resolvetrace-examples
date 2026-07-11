@@ -10,6 +10,25 @@ top-level grouping instead.
 ## [Unreleased]
 
 ### Changed
+- **Split into three pages.** The single tabbed page is now a landing page
+  (`index.html`) linking to an **OSS features** page (`oss.html`, one
+  `auto`-mode client) and a **Platform features** page (`platform.html`, one
+  `manual`-mode client). Each page hardcodes the SDK replay mode that matches its
+  backend — closer to what a real single-backend app looks like — and the same
+  built `dist/` still serves all three against any backend (multi-page Vite
+  build; the landing + Platform pages still probe `GET /api/capabilities`).
+- **Consent-gated replay is now two toggles.** The Platform page replaces the
+  Allow / No-thanks / Grant / Withdraw / Reset buttons with two independent
+  switches — **Replay consent** (Allow ⇄ Withdraw, recorded server-side) and
+  **Record replay** (Start ⇄ Stop, driving `replay.start()/stop()`) — plus a live
+  status line, so the enforcement gap is visible: recording while consent is
+  withdrawn yields `403 consent_required`; allowing flips it to `201`.
+
+### Removed
+- The **Enterprise** teaser section (SSO/SAML, dedicated isolation, audit export)
+  — out of scope for this demo for now.
+
+### Changed
 - **Runtime configuration.** The demo now reads its endpoint + key at runtime
   from `window.__RT_CONFIG__` (a `config.js` the hosting container writes from
   its env at startup) instead of build-time `VITE_RT_*` inlining. The same image

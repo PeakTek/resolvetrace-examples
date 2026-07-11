@@ -1,32 +1,99 @@
 /**
- * Platform-tier demo wiring: the consent-gated replay flow + a small operator
- * panel. Active only when the capability probe reports a Platform backend.
+ * Platform features page — the ResolveTrace Platform differentiators:
+ * consent-gated replay + a small operator panel. Creates ONE `manual`-mode
+ * client (the Platform-only capability) and drives replay recording with two
+ * independent switches so the enforcement story is visible:
  *
- * This is a *demo-local* consent banner built entirely on the public SDK
- * primitives (`client.replay.start()/stop()`, `client.session.id`) plus the
- * deployment-provided `/api/*` contract. It is NOT a ResolveTrace consent
- * product — a managed deployment ships the real thing; here we just show the
- * primitives end-to-end.
+ *   • Replay consent   — records the end-user's decision server-side
+ *                        (POST /api/consent). This is the evidence the managed
+ *                        server checks before admitting replay chunks.
+ *   • Record replay    — drives the SDK's `replay.start()` / `replay.stop()`
+ *                        capture span (recording happens in the browser).
  *
- * The `/api/*` routes (`consent`, `replay-mode`, `consent-records`) are provided
- * by the hosting deployment when the demo runs against ResolveTrace Platform;
- * they proxy to the managed admin surface server-side (the demo browser never
- * holds an operator credential).
+ * The point is the *interaction*: the browser records whenever "Record" is on,
+ * but the server only ADMITS chunks when consent is on file. Turn Record on with
+ * consent allowed → uploads 201. Withdraw consent while still recording → the
+ * server rejects new chunks 403 consent_required (enforcement in the data plane,
+ * not a client-side honor system). Re-allow → 201 within ~5s (verdict cache).
+ *
+ * Everything here is built on the public SDK primitives plus the small `/api/*`
+ * contract the hosting deployment provides against Platform. It is NOT a
+ * ResolveTrace consent product — a managed deployment ships the real thing; this
+ * page just wires the primitives end-to-end. Against an OSS backend the
+ * capability probe fails closed and the sections render as disabled teasers.
  */
 
 import type { ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
+import { probeCapabilities } from './capabilities';
+import {
+  $,
+  buildClient,
+  makeLogger,
+  redactKey,
+  renderDiagnostics,
+  type Logger,
+} from './shared';
 import { rawFetch } from './raw-fetch';
 
-export type Logger = (
-  msg: string,
-  level?: 'info' | 'success' | 'warn' | 'error',
-) => void;
+const log = makeLogger();
+const caps = await probeCapabilities();
 
-const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
-  const el = document.getElementById(id);
-  if (!el) throw new Error(`Missing element #${id}`);
-  return el as T;
+// Build a `manual`-mode client even against an OSS backend, so the page stays a
+// faithful reference; the controls stay disabled until a Platform backend is
+// detected. `enabled: true` — the master switch is on; the recording *span* is
+// what the Record toggle drives.
+const { rt, config } = await buildClient({
+  replayMode: 'manual',
+  replayEnabled: true,
+  log,
+});
+
+$('cfg-endpoint').textContent = config.endpoint;
+$('cfg-apikey').textContent = redactKey(config.apiKey);
+
+const badge = $('tier-badge');
+badge.textContent = caps.consent ? 'Platform' : 'OSS';
+badge.className = `tier tier-${caps.consent ? 'platform' : 'oss'}`;
+
+log(`Client created (replay mode: manual). Endpoint: ${config.endpoint}`, 'success');
+renderDiagnostics(rt);
+rt.track('page_view', { path: window.location.pathname });
+
+// Surface the per-session support code (this is a live session).
+const supportCodeEl = $('support-code');
+const supportPoll = window.setInterval(() => {
+  const code = rt.session.supportCode;
+  if (code) {
+    supportCodeEl.textContent = code;
+    window.clearInterval(supportPoll);
+  }
+}, 500);
+
+if (caps.consent) {
+  activatePlatform(rt, log);
+  log('consent-gated replay active', 'success');
+} else {
+  $('platform-teaser-banner').hidden = false;
+  for (const id of ['sec-consent', 'sec-operator']) {
+    const sec = $(id);
+    sec.classList.add('is-teaser');
+    sec
+      .querySelectorAll('button, input')
+      .forEach((el) => ((el as HTMLButtonElement | HTMLInputElement).disabled = true));
+  }
+}
+
+// --- Best-effort flush on hide (keep the session across a refresh) ----------
+
+const flushOnHide = (): void => {
+  void rt.flush({ keepalive: true });
 };
+window.addEventListener('pagehide', flushOnHide);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushOnHide();
+});
+
+// ===========================================================================
 
 /** Stable per-browser subject id, so consent rows correlate across sessions. */
 function subjectId(): string {
@@ -54,30 +121,47 @@ async function api(path: string, init?: RequestInit): Promise<ApiResult> {
   return { status: res.status, body };
 }
 
-export function activatePlatformSections(
-  rt: ResolveTraceClient,
-  log: Logger,
-): void {
-  for (const id of ['sec-consent', 'sec-operator']) {
-    const sec = $(id);
-    sec.hidden = false;
-    sec.classList.remove('is-teaser');
-  }
-
+function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   const subj = subjectId();
-  const stateEl = $('consent-state');
+
+  const consentToggle = $<HTMLInputElement>('toggle-consent');
+  const recordToggle = $<HTMLInputElement>('toggle-record');
+  const consentStateEl = $('consent-state');
+  const recordStateEl = $('record-state');
   const sessionEl = $('consent-session');
+  const statusLine = $('replay-status');
   const verdictPanel = $('verdict-panel');
   const opMode = $('op-mode');
   const opRecords = $('op-records');
 
-  const renderState = (state: string): void => {
-    stateEl.textContent = state;
-    sessionEl.textContent = rt.session.id ?? '—';
-  };
-  renderState('unknown');
+  // Two independent bits of state — see the file header.
+  let consentAllowed = false;
+  let recording = false;
 
-  // Replay upload verdicts (dispatched by main.ts's inspecting transport).
+  function renderStatus(): void {
+    sessionEl.textContent = rt.session.id ?? '—';
+    consentStateEl.textContent = consentAllowed ? 'allowed' : 'withdrawn';
+    recordStateEl.textContent = recording ? 'recording' : 'stopped';
+
+    let msg: string;
+    let cls: string;
+    if (!recording) {
+      msg = 'Record is off — the browser is producing no replay chunks.';
+      cls = 'idle';
+    } else if (consentAllowed) {
+      msg = 'Recording + consent allowed → the server admits chunks (expect 201 accepted).';
+      cls = 'ok';
+    } else {
+      msg =
+        'Recording, but consent is withdrawn → the server rejects chunks (expect 403 consent_required).';
+      cls = 'deny';
+    }
+    statusLine.textContent = msg;
+    statusLine.className = `status-line ${cls}`;
+  }
+  renderStatus();
+
+  // Live replay upload verdicts (dispatched by shared.ts's inspecting transport).
   document.addEventListener('rt:replay-verdict', (e) => {
     const { leg, status, reason } = (e as CustomEvent).detail as {
       leg: string;
@@ -87,67 +171,69 @@ export function activatePlatformSections(
     const ok = status >= 200 && status < 300;
     const line = document.createElement('div');
     line.className = `verdict ${ok ? 'ok' : 'deny'}`;
+    const time = new Date().toLocaleTimeString();
     line.textContent = ok
-      ? `✓ replay ${leg}: ${status} (chunk accepted)`
-      : `✗ replay ${leg}: ${status}${reason ? ` (${reason})` : ''}`;
+      ? `${time}  ✓ replay ${leg}: ${status} (chunk accepted)`
+      : `${time}  ✗ replay ${leg}: ${status}${reason ? ` (${reason})` : ''}`;
     verdictPanel.prepend(line);
   });
 
-  async function recordDecision(
-    granted: boolean,
-    source: 'prompt' | 'headless',
-  ): Promise<void> {
+  async function recordConsent(granted: boolean): Promise<void> {
     const sessionId = rt.session.id;
     const { status } = await api('/consent', {
       method: 'POST',
-      body: JSON.stringify({ subjectId: subj, sessionId, granted, source }),
+      body: JSON.stringify({ subjectId: subj, sessionId, granted, source: 'prompt' }),
     });
     log(
-      `consent ${granted ? 'granted' : 'withdrawn'} (${source}) → POST /api/consent ${status}`,
+      `consent ${granted ? 'allowed' : 'withdrawn'} → POST /api/consent ${status}`,
       status >= 200 && status < 300 ? 'success' : 'error',
     );
   }
 
-  async function grant(source: 'prompt' | 'headless'): Promise<void> {
-    // Record the consent evidence first, then begin the capture span, so the
-    // server has a grant on file before the first chunk uploads.
-    await recordDecision(true, source);
-    const started = await rt.replay.start();
-    renderState(started ? 'granted (recording)' : 'granted (start no-op)');
-  }
-
-  async function withdraw(source: 'prompt' | 'headless'): Promise<void> {
-    rt.replay.stop();
-    await recordDecision(false, source);
-    renderState('withdrawn');
-  }
-
-  // Consent prompt (Allow / No thanks) — dismiss on either choice.
-  const prompt = $('consent-prompt');
-  $('btn-consent-allow').addEventListener('click', () => {
-    void grant('prompt');
-    prompt.hidden = true;
-  });
-  $('btn-consent-decline').addEventListener('click', () => {
-    void withdraw('prompt');
-    prompt.hidden = true;
+  // --- Toggle 1: Replay consent (Allow ⇄ Withdraw) -------------------------
+  consentToggle.addEventListener('change', async () => {
+    consentAllowed = consentToggle.checked;
+    renderStatus();
+    await recordConsent(consentAllowed);
+    await refreshRecords();
   });
 
-  // Headless API buttons (for customers with their own CMP).
-  $('btn-consent-grant').addEventListener('click', () => void grant('headless'));
-  $('btn-consent-withdraw').addEventListener('click', () =>
-    void withdraw('headless'),
-  );
-  $('btn-consent-reset').addEventListener('click', () => {
-    rt.replay.stop();
+  // --- Toggle 2: Record replay (Start ⇄ Stop) ------------------------------
+  recordToggle.addEventListener('change', async () => {
+    recording = recordToggle.checked;
+    if (recording) {
+      const started = await rt.replay.start();
+      log(
+        started
+          ? 'replay.start() → recording span began'
+          : 'replay.start() was a no-op (already recording / policy gate)',
+        started ? 'success' : 'warn',
+      );
+    } else {
+      rt.replay.stop();
+      log('replay.stop() → recording span ended', 'warn');
+    }
+    renderStatus();
+  });
+
+  $<HTMLButtonElement>('btn-clear-verdicts').addEventListener('click', () => {
     verdictPanel.replaceChildren();
-    prompt.hidden = false;
-    renderState('unknown');
-    log('consent reset — reload to record a fresh session decision', 'warn');
   });
 
-  // --- Operator panel ------------------------------------------------------
+  // --- Activity affordance: give replay something to record ----------------
+  // rrweb snapshots DOM mutations + interactions; this appends masked rows so
+  // there's a steady stream of chunks to watch the server admit / reject.
+  const activityFeed = $('activity-feed');
+  let activityN = 0;
+  $<HTMLButtonElement>('btn-activity').addEventListener('click', () => {
+    activityN += 1;
+    const row = document.createElement('div');
+    row.className = 'activity-row';
+    row.textContent = `activity #${activityN} @ ${new Date().toLocaleTimeString()}`;
+    activityFeed.prepend(row);
+  });
 
+  // --- Operator panel: tenant replay policy + consent records --------------
   async function refreshMode(): Promise<void> {
     const { status, body } = await api('/replay-mode');
     opMode.textContent =
@@ -159,8 +245,10 @@ export function activatePlatformSections(
       method: 'PUT',
       body: JSON.stringify({ mode }),
     });
-    log(`operator set replay mode → ${mode} (PUT /api/replay-mode ${status})`,
-      status >= 200 && status < 300 ? 'success' : 'error');
+    log(
+      `operator set replay mode → ${mode} (PUT /api/replay-mode ${status})`,
+      status >= 200 && status < 300 ? 'success' : 'error',
+    );
     await refreshMode();
   }
 
@@ -184,10 +272,10 @@ export function activatePlatformSections(
     }
   }
 
-  $('btn-op-auto').addEventListener('click', () => void setMode('auto'));
-  $('btn-op-manual').addEventListener('click', () => void setMode('manual'));
-  $('btn-op-off').addEventListener('click', () => void setMode('off'));
-  $('btn-op-refresh').addEventListener('click', () => void refreshRecords());
+  $<HTMLButtonElement>('btn-op-auto').addEventListener('click', () => void setMode('auto'));
+  $<HTMLButtonElement>('btn-op-manual').addEventListener('click', () => void setMode('manual'));
+  $<HTMLButtonElement>('btn-op-off').addEventListener('click', () => void setMode('off'));
+  $<HTMLButtonElement>('btn-op-refresh').addEventListener('click', () => void refreshRecords());
 
   void refreshMode();
   void refreshRecords();

@@ -4,37 +4,56 @@ Browser demo that drives `@peaktek/resolvetrace-sdk` against a ResolveTrace
 ingest server. Vanilla TypeScript, Vite tooling, no frontend framework —
 intended as the **smallest possible reference** for "SDK → ingest server".
 
-**One demo, every backend.** On load it probes the deployment's capabilities
-(`GET /api/capabilities`, fail-closed to OSS) and adapts: against a self-hosted
-open-source server it shows the baseline surface; against a **ResolveTrace
-Platform** server it additionally activates the consent-gated replay flow.
-Platform/Enterprise-only sections are badged; baseline features are not.
+**One build, three pages.** A landing page (`index.html`) links to two feature
+surfaces:
 
-Because it targets both, the demo derives its SDK replay `mode` from that probe
-— `manual` against Platform (consent-gated), `auto` against OSS. A real
-single-backend app would just hardcode the mode it needs; `manual` is a
-**Platform-only** capability. (This is the SDK's host-set `autoCapture.replay.mode`
-— distinct from the operator panel's *tenant replay policy*, a server-side
-setting the `/api/replay-mode` route reads/writes.)
+- **OSS features** (`oss.html`) — the baseline SDK surface that works on the
+  self-hosted open-source build (and any backend). One `auto`-mode client
+  (whole-session masked replay) exercising the public capture / lifecycle /
+  auto-capture primitives.
+- **Platform features** (`platform.html`) — the managed (**ResolveTrace
+  Platform**) differentiators: consent-gated `manual` replay with live server
+  verdicts, plus an operator panel. Against a plain OSS backend these render as
+  disabled previews.
+
+Each page hardcodes the one SDK replay `mode` that matches its backend — `auto`
+on the OSS page, `manual` on the Platform page (a **Platform-only** capability).
+A real single-backend app looks like one of these pages. (`mode` is the SDK's
+host-set `autoCapture.replay.mode` — distinct from the operator panel's *tenant
+replay policy*, a server-side setting the `/api/replay-mode` route reads/writes.)
+
+The landing and Platform pages probe the deployment (`GET /api/capabilities`,
+fail-closed to OSS): the landing page badges the detected tier and highlights the
+matching card; the Platform page activates its controls against a Platform
+backend and shows disabled previews otherwise. The same built `dist/` serves all
+three pages against any backend.
 
 ## What it demonstrates
 
-Baseline (works on the self-hosted OSS build):
+**OSS features page** (`oss.html` — works on the self-hosted OSS build):
 
 - Creating a client with `createClient({ apiKey, endpoint })`
 - `track(name, attrs)` and `capture({ type, attributes })` — the two main capture entry points
 - `flush()`, `shutdown()`, `getDiagnostics()` — lifecycle + observability
 - The built-in Stage-1 scrubber redacting PII before the batch leaves the browser
 - Whole-session masked replay (`autoCapture.replay.mode: 'auto'`) + an on/off toggle
+- Browser auto-capture (rage/dead clicks, repeated submit, JS errors,
+  failed/slow fetches, long tasks) + the per-session support code
 
-Badged **Platform** (active only against a Platform backend; teasers otherwise):
+**Platform features page** (`platform.html` — active against a Platform backend;
+disabled previews otherwise):
 
-- Consent-gated **manual** replay — a demo-local consent banner + headless
-  Grant/Withdraw driving the public `client.replay.start()/stop()` primitives,
-  with replay upload verdicts shown live (`201` accepted vs
-  `403 consent_required`)
+- Consent-gated **manual** replay driven by two independent switches:
+  - **Replay consent** (Allow ⇄ Withdraw) — records the end-user decision
+    server-side (`POST /api/consent`); this is the evidence the server checks.
+  - **Record replay** (Start ⇄ Stop) — drives the public
+    `client.replay.start()/stop()` capture span (recording is client-side).
+  A live status line + verdict panel show the enforcement: recording with consent
+  allowed uploads `201`; withdraw consent while still recording and the server
+  rejects new chunks `403 consent_required` (the gate is in the data plane, not
+  the client).
 - A small operator panel — read/switch the tenant's replay mode and list
-  consent records
+  consent records (audit trail).
 
 ## Deployment tiers &amp; the `/api` contract
 
@@ -44,15 +63,16 @@ Platform (its implementation is not part of this example):
 
 | Route | Purpose |
 |---|---|
-| `GET /api/capabilities` | `{ tier, consent }` — drives which sections activate |
+| `GET /api/capabilities` | `{ tier, consent }` — landing badge + Platform-page activation |
+| `POST /api/session-key` | mint a short-lived events:write key (managed demo) |
 | `POST /api/consent` | record a consent decision for the current session |
 | `GET`/`PUT /api/replay-mode` | read / set the demo tenant's replay mode |
 | `GET /api/consent-records` | list recorded consent decisions |
 
 Against a plain OSS server none of these exist; the probe fails closed and the
-Platform sections render as availability teasers. The demo carries no tier or
-consent logic of its own — it only exercises public SDK primitives plus this
-deployment-provided contract.
+Platform page renders its controls as disabled previews. The demo carries no
+tier or consent logic of its own — it only exercises public SDK primitives plus
+this deployment-provided contract.
 
 ## Prerequisites
 
@@ -171,4 +191,4 @@ this workaround:
 2. Delete the `alias` in `vite.config.ts`.
 3. Delete the `paths` entry in `tsconfig.json`.
 
-Application code in `src/main.ts` does not change.
+The page modules (`src/entry.ts`, `src/oss.ts`, `src/platform.ts`) do not change.

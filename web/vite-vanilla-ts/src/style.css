@@ -201,11 +201,6 @@ pre {
   background: var(--accent);
   border-color: var(--accent);
 }
-.tier-enterprise {
-  color: #0a0e13;
-  background: #c084fc;
-  border-color: #c084fc;
-}
 
 .badge {
   font-size: 0.62rem;
@@ -218,27 +213,17 @@ pre {
   color: #0a0e13;
   background: var(--accent);
 }
-.badge-ent {
-  background: #c084fc;
-}
 
-/* OSS backend: platform sections shown as availability teasers. */
+/* OSS backend: platform sections shown as disabled teasers. */
 .is-teaser {
-  opacity: 0.6;
-}
-.teaser-note {
-  display: none;
-  color: var(--warn);
-}
-.is-teaser .teaser-note {
-  display: block;
+  opacity: 0.55;
 }
 .is-teaser .platform-note {
   display: none;
 }
-.is-teaser .consent-prompt,
 .is-teaser .verdict-panel,
-.is-teaser .records {
+.is-teaser .records,
+.is-teaser .activity-feed {
   display: none;
 }
 
@@ -259,25 +244,243 @@ button.secondary:hover:not(:disabled) {
   background: var(--border);
 }
 
-.consent-prompt {
+/* --- Landing page: back link + feature cards ----------------------------- */
+
+.back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  color: var(--fg-dim);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+.back:hover {
+  color: var(--accent);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 640px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.card.recommended {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.card-head {
+  display: flex;
   align-items: center;
-  padding: 0.6rem 0.85rem;
-  background: rgba(94, 184, 255, 0.08);
-  border: 1px solid var(--accent);
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.card-head h2 {
+  margin: 0;
+  color: var(--fg);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 1.05rem;
+}
+.card p {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 0.88rem;
+}
+.card-cta {
+  margin-top: auto;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.availability {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.availability.available {
+  color: var(--success);
+}
+.availability.available::before {
+  content: "✓ ";
+}
+.availability.preview {
+  color: var(--warn);
+}
+
+.compare {
+  overflow-x: auto;
+}
+.compare table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.compare th,
+.compare td {
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.compare th {
+  color: var(--fg-dim);
+  font-weight: 600;
+}
+.compare td:first-child {
+  color: var(--fg);
+}
+
+/* --- Platform: consent/record toggles + status --------------------------- */
+
+.switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 0.75rem 0;
+}
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .slider {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 150ms ease;
+}
+.switch .slider::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 3px;
+  border-radius: 50%;
+  background: var(--fg);
+  transition: transform 150ms ease;
+}
+.switch input:checked + .slider {
+  background: var(--accent);
+}
+.switch input:checked + .slider::before {
+  transform: translateX(18px);
+  background: #0a0e13;
+}
+.switch input:disabled + .slider {
+  opacity: 0.5;
+}
+.switch input:focus-visible + .slider {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+.switch-label {
+  font-size: 0.9rem;
+}
+
+.status-line {
+  margin: 0.5rem 0;
+  padding: 0.55rem 0.8rem;
   border-radius: 6px;
+  font-size: 0.88rem;
+  border: 1px solid var(--border);
+}
+.status-line.idle {
+  color: var(--fg-dim);
+}
+.status-line.ok {
+  color: var(--success);
+  border-color: var(--success);
+  background: rgba(74, 222, 128, 0.08);
+}
+.status-line.deny {
+  color: var(--error);
+  border-color: var(--error);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.hint.lead {
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+.mini-head {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 1rem 0 0.35rem;
+}
+
+.activity {
+  align-items: center;
+  margin-top: 0.5rem;
+}
+.activity input {
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--fg);
+}
+.activity-feed {
+  margin: 0.4rem 0 0;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+}
+.activity-row {
+  padding: 0.12rem 0;
 }
 
 .verdict-panel {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  margin: 0.5rem 0 0;
+  margin: 0.25rem 0 0;
+  max-height: 220px;
+  overflow-y: auto;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.78rem;
 }
 .verdict {
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
+}
+.verdict.idle {
+  color: var(--fg-dim);
 }
 .verdict.ok {
   color: var(--success);
@@ -303,35 +506,6 @@ button.secondary:hover:not(:disabled) {
   word-break: break-word;
 }
 
-/* --- View tabs (OSS features / Platform features) ------------------------ */
-
-nav.views {
-  display: flex;
-  gap: 0.25rem;
-  margin-top: 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-nav.views button {
-  background: transparent;
-  color: var(--fg-dim);
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  padding: 0.5rem 0.85rem;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-nav.views button:hover:not(:disabled) {
-  background: transparent;
-  color: var(--fg);
-}
-nav.views button.active {
-  color: var(--fg);
-  border-bottom-color: var(--accent);
-}
-
 .teaser-banner {
   padding: 0.7rem 1rem;
   margin-bottom: 1.5rem;
@@ -341,7 +515,6 @@ nav.views button.active {
   font-size: 0.9rem;
 }
 
-#view-oss > section:last-child,
-#view-platform > section:last-child {
+main > section:last-child {
   margin-bottom: 2.5rem;
 }
