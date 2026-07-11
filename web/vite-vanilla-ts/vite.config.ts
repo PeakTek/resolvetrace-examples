@@ -23,11 +23,23 @@ export default defineConfig({
       '@peaktek/resolvetrace-sdk': sdkSrc,
     },
   },
-  // The entry module awaits a capability probe at top level (one build serves
+  // The entry modules await a capability probe at top level (one build serves
   // both OSS and Platform backends). Target a baseline that supports top-level
   // await + ES2022 — all current evergreen browsers.
+  //
+  // Multi-page app: a landing page (index.html) links to the OSS features page
+  // (oss.html) and the Platform features page (platform.html), each its own
+  // entry module. The same built `dist/` is served by both the OSS static
+  // server and the managed demo backend.
   build: {
     target: 'es2022',
+    rollupOptions: {
+      input: {
+        main: resolve(here, 'index.html'),
+        oss: resolve(here, 'oss.html'),
+        platform: resolve(here, 'platform.html'),
+      },
+    },
   },
   server: {
     host: '0.0.0.0',

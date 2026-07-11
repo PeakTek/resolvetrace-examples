@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform features — ResolveTrace SDK demo</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <a class="back" href="/">← All demos</a>
+        <h1>
+          Platform features
+          <span id="tier-badge" class="tier tier-platform">…</span>
+        </h1>
+        <p class="subtitle">
+          The managed (ResolveTrace Platform) differentiators, on one
+          <code>manual</code>-mode client: <strong>consent-gated replay</strong>
+          the server enforces, plus an <strong>operator panel</strong> for the
+          tenant's replay policy and consent audit trail.
+        </p>
+        <div class="config">
+          <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
+          <span><strong>API key:</strong> <code id="cfg-apikey">—</code></span>
+          <span><strong>Support code:</strong> <code id="support-code">…</code></span>
+        </div>
+      </header>
+
+      <div class="teaser-banner" id="platform-teaser-banner" hidden>
+        This demo is running against an <strong>OSS backend</strong>, so the
+        controls below are disabled previews. Deploy it against
+        <strong>ResolveTrace Platform</strong> to enable consent-gated replay and
+        the operator controls.
+      </div>
+
+      <!-- ==================== Consent-gated replay ==================== -->
+      <section class="actions is-platform" id="sec-consent">
+        <h2>Consent-gated replay <span class="badge">Platform</span></h2>
+
+        <p class="hint lead">
+          Two independent switches. The browser records whenever
+          <strong>Record</strong> is on — but the managed server only
+          <em>admits</em> chunks when <strong>consent</strong> is on file. The
+          gap between them is the enforcement story.
+        </p>
+
+        <div class="switch-row">
+          <label class="switch">
+            <input type="checkbox" id="toggle-consent" />
+            <span class="slider"></span>
+            <span class="switch-label">
+              Replay consent — <strong id="consent-state">withdrawn</strong>
+            </span>
+          </label>
+
+          <label class="switch">
+            <input type="checkbox" id="toggle-record" />
+            <span class="slider"></span>
+            <span class="switch-label">
+              Record replay — <strong id="record-state">stopped</strong>
+            </span>
+          </label>
+        </div>
+
+        <p class="status-line idle" id="replay-status">…</p>
+
+        <div class="button-row activity">
+          <button id="btn-activity">Generate replay activity</button>
+          <input id="activity-input" type="text" placeholder="type here (masked in replay)" />
+          <button id="btn-clear-verdicts" class="secondary">Clear verdicts</button>
+        </div>
+        <div id="activity-feed" class="activity-feed"></div>
+
+        <h3 class="mini-head">
+          Live server verdicts · session <code id="consent-session">—</code>
+        </h3>
+        <div id="verdict-panel" class="verdict-panel">
+          <div class="verdict idle">(turn Record on to start uploading chunks)</div>
+        </div>
+
+        <p class="hint platform-note">
+          <strong>Try it:</strong> allow consent, turn Record on → chunks upload
+          <code>201</code>. Now <em>withdraw</em> consent while still recording →
+          the server rejects new chunks <code>403 consent_required</code> within
+          ~5s (verdict cache). Re-allow → back to <code>201</code>. Withdrawing
+          consent does not stop the browser recording — the gate lives in the
+          data plane, not the client.
+        </p>
+      </section>
+
+      <!-- ==================== Operator panel ==================== -->
+      <section class="actions is-platform" id="sec-operator">
+        <h2>Tenant replay policy <span class="badge">Platform</span></h2>
+        <div class="button-row">
+          <span>mode: <code id="op-mode">—</code></span>
+          <button id="btn-op-auto">auto</button>
+          <button id="btn-op-manual">manual</button>
+          <button id="btn-op-off">off</button>
+          <button id="btn-op-refresh" class="secondary">Refresh records</button>
+        </div>
+        <div id="op-records" class="records">(no consent records yet)</div>
+        <p class="hint platform-note">
+          The operator controls the tenant's replay policy centrally; server
+          enforcement follows it live. This page's client stays a
+          <code>manual</code> client until reload. Operator actions here affect
+          only the demo tenant.
+        </p>
+      </section>
+
+      <section class="diagnostics">
+        <h2>Diagnostics</h2>
+        <pre id="diag-box">(idle)</pre>
+      </section>
+
+      <section class="log">
+        <h2>Event log</h2>
+        <div id="log-box" class="log-box"></div>
+      </section>
+    </main>
+
+    <script src="/config.js"></script>
+    <script type="module" src="/src/platform.ts"></script>
+  </body>
+</html>
