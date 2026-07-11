@@ -17,9 +17,9 @@
  * not a client-side honor system). Re-allow → 201 within ~5s (verdict cache).
  *
  * Everything here is built on the public SDK primitives plus the small `/api/*`
- * contract the hosting deployment provides against Platform. It is NOT a
- * ResolveTrace consent product — a managed deployment ships the real thing; this
- * page just wires the primitives end-to-end. Against an OSS backend the
+ * contract the hosting deployment provides against Platform. It is a demo-local
+ * banner, not a turnkey consent feature — a managed backend provides that; here
+ * we just wire the public primitives end-to-end. Against an OSS backend the
  * capability probe fails closed and the sections render as disabled teasers.
  */
 
