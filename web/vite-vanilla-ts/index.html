@@ -17,9 +17,6 @@
           <strong>Platform features</strong> need a managed (ResolveTrace
           Platform) backend.
         </p>
-        <div class="config">
-          <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
-        </div>
       </header>
 
       <section class="cards">
@@ -78,7 +75,7 @@
               <tr>
                 <td>Server admits replay only with recorded consent</td>
                 <td>—</td>
-                <td>✓ enforced in the data plane</td>
+                <td>✓ enforced server-side</td>
               </tr>
               <tr>
                 <td>Operator controls (tenant replay policy, consent audit)</td>
@@ -88,11 +85,6 @@
             </tbody>
           </table>
         </div>
-        <p class="hint">
-          This same build serves both surfaces and adapts at runtime: it probes
-          <code>GET /api/capabilities</code> (fail-closed to OSS), so the Platform
-          page degrades to disabled previews against a plain OSS backend.
-        </p>
       </section>
     </main>
 

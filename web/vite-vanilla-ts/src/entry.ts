@@ -10,11 +10,6 @@ import { $ } from './shared';
 
 const caps = await probeCapabilities();
 
-const endpointEl = document.getElementById('cfg-endpoint');
-if (endpointEl) {
-  endpointEl.textContent = String(window.__RT_CONFIG__?.endpoint ?? '—');
-}
-
 // Point at the surface that matches the backend and label Platform availability.
 const availability = $('platform-availability');
 if (caps.consent) {
