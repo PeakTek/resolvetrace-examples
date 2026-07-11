@@ -38,11 +38,21 @@
       <section class="actions is-platform" id="sec-consent">
         <h2>Consent-gated replay <span class="badge">Platform</span></h2>
 
+        <div class="why-panel">
+          <strong>Why this matters:</strong> consent is enforced by the server in
+          the data plane — not a client-side honor system a developer can bypass.
+          Replay is admitted <em>only</em> for sessions with recorded consent,
+          every decision is captured as an auditable record, and withdrawal takes
+          effect in real time. This is what maps session replay to GDPR / CCPA /
+          PIPEDA consent obligations.
+        </div>
+
         <p class="hint lead">
           Two independent switches. The browser records whenever
           <strong>Record</strong> is on — but the managed server only
           <em>admits</em> chunks when <strong>consent</strong> is on file. The
-          gap between them is the enforcement story.
+          gap between them is the enforcement story. New here?
+          <strong>Run guided demo</strong> walks the whole thing in ~30s.
         </p>
 
         <div class="switch-row">
@@ -61,6 +71,16 @@
               Record replay — <strong id="record-state">stopped</strong>
             </span>
           </label>
+        </div>
+
+        <div class="button-row demo-controls">
+          <button id="btn-guided-demo">▶ Run guided demo</button>
+          <button id="btn-reset-demo" class="secondary">Reset demo</button>
+        </div>
+
+        <div class="tour-banner" id="tour-banner" hidden>
+          <span class="tour-step" id="tour-step">Step 1 / 4</span>
+          <span class="tour-msg" id="tour-msg">…</span>
         </div>
 
         <p class="status-line idle" id="replay-status">…</p>

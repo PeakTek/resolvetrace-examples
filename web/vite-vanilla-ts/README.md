@@ -52,6 +52,9 @@ disabled previews otherwise):
   allowed uploads `201`; withdraw consent while still recording and the server
   rejects new chunks `403 consent_required` (the gate is in the data plane, not
   the client).
+- A one-click **guided demo** that auto-drives the enforcement story in ~30s
+  (allow + record → `201`; withdraw while recording → `403`; re-allow → `201`),
+  narrated and paced by the server's real verdicts, plus a **Reset** button.
 - A small operator panel — read/switch the tenant's replay mode and list
   consent records (audit trail).
 

@@ -190,18 +190,19 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     );
   }
 
-  // --- Toggle 1: Replay consent (Allow ⇄ Withdraw) -------------------------
-  consentToggle.addEventListener('change', async () => {
-    consentAllowed = consentToggle.checked;
+  // State transitions, shared by the manual toggles and the guided tour.
+  async function setConsent(allowed: boolean): Promise<void> {
+    consentAllowed = allowed;
+    consentToggle.checked = allowed;
     renderStatus();
-    await recordConsent(consentAllowed);
+    await recordConsent(allowed);
     await refreshRecords();
-  });
+  }
 
-  // --- Toggle 2: Record replay (Start ⇄ Stop) ------------------------------
-  recordToggle.addEventListener('change', async () => {
-    recording = recordToggle.checked;
-    if (recording) {
+  async function setRecording(on: boolean): Promise<void> {
+    recording = on;
+    recordToggle.checked = on;
+    if (on) {
       const started = await rt.replay.start();
       log(
         started
@@ -214,7 +215,12 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
       log('replay.stop() → recording span ended', 'warn');
     }
     renderStatus();
-  });
+  }
+
+  // --- Toggle 1: Replay consent (Allow ⇄ Withdraw) -------------------------
+  consentToggle.addEventListener('change', () => void setConsent(consentToggle.checked));
+  // --- Toggle 2: Record replay (Start ⇄ Stop) ------------------------------
+  recordToggle.addEventListener('change', () => void setRecording(recordToggle.checked));
 
   $<HTMLButtonElement>('btn-clear-verdicts').addEventListener('click', () => {
     verdictPanel.replaceChildren();
@@ -225,12 +231,105 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   // there's a steady stream of chunks to watch the server admit / reject.
   const activityFeed = $('activity-feed');
   let activityN = 0;
-  $<HTMLButtonElement>('btn-activity').addEventListener('click', () => {
+  function addActivity(): void {
     activityN += 1;
     const row = document.createElement('div');
     row.className = 'activity-row';
     row.textContent = `activity #${activityN} @ ${new Date().toLocaleTimeString()}`;
     activityFeed.prepend(row);
+  }
+  $<HTMLButtonElement>('btn-activity').addEventListener('click', addActivity);
+
+  // --- Guided tour: auto-drive the enforcement story -----------------------
+  // Each step sets state, then waits for the SERVER's actual next verdict
+  // (accept/reject) rather than a fixed delay — so the narration tracks the real
+  // data-plane decision (incl. the ~5s verdict-cache lag on a fresh withdrawal).
+  const btnGuided = $<HTMLButtonElement>('btn-guided-demo');
+  const tourBanner = $('tour-banner');
+  const tourStep = $('tour-step');
+  const tourMsg = $('tour-msg');
+
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((r) => window.setTimeout(r, ms));
+
+  /** Resolve when the next replay verdict matches `want` (or on timeout). */
+  function waitForVerdict(want: 'accept' | 'reject', timeoutMs = 15000): Promise<boolean> {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (matched: boolean): void => {
+        if (done) return;
+        done = true;
+        document.removeEventListener('rt:replay-verdict', onVerdict);
+        window.clearTimeout(timer);
+        resolve(matched);
+      };
+      const onVerdict = (e: Event): void => {
+        const { status } = (e as CustomEvent).detail as { status: number };
+        const ok = status >= 200 && status < 300;
+        if ((want === 'accept' && ok) || (want === 'reject' && !ok)) finish(true);
+      };
+      const timer = window.setTimeout(() => finish(false), timeoutMs);
+      document.addEventListener('rt:replay-verdict', onVerdict);
+    });
+  }
+
+  async function runGuidedTour(): Promise<void> {
+    btnGuided.disabled = true;
+    consentToggle.disabled = true;
+    recordToggle.disabled = true;
+    tourBanner.hidden = false;
+    verdictPanel.replaceChildren();
+
+    const narrate = (n: number, msg: string): void => {
+      tourStep.textContent = `Step ${n} / 4`;
+      tourMsg.textContent = msg;
+    };
+
+    try {
+      narrate(1, 'Consent allowed, recording on — asking the server to admit replay chunks (expecting 201 accepted)…');
+      await setConsent(true);
+      await setRecording(true);
+      addActivity();
+      const a1 = await waitForVerdict('accept');
+      narrate(1, a1
+        ? '✓ Server accepted the chunk (201). Replay is stored for this consented session.'
+        : '…still waiting for the first chunk — replay uploads every few seconds.');
+      await sleep(2600);
+
+      narrate(2, 'Now withdrawing consent while STILL recording — the browser keeps capturing, but the server should refuse new chunks…');
+      await setConsent(false);
+      addActivity();
+      const a2 = await waitForVerdict('reject');
+      narrate(2, a2
+        ? '✗ Server rejected the chunk (403 consent_required). Enforcement is server-side — the client cannot override it.'
+        : '…a just-withdrawn grant can linger in the server’s verdict cache for ~5s.');
+      await sleep(2600);
+
+      narrate(3, 'Restoring consent — the server should admit chunks again within ~5s…');
+      await setConsent(true);
+      addActivity();
+      const a3 = await waitForVerdict('accept');
+      narrate(3, a3
+        ? '✓ Back to 201 accepted. Consent is the switch; the data plane honors it live.'
+        : '…waiting for the next chunk after re-consent.');
+      await sleep(2600);
+
+      narrate(4, 'That’s the Platform difference: consent enforced in the data plane, recorded as an auditable decision, reversible in real time. (Left recording ON, consent ALLOWED.)');
+    } finally {
+      consentToggle.disabled = false;
+      recordToggle.disabled = false;
+      btnGuided.disabled = false;
+    }
+  }
+  btnGuided.addEventListener('click', () => void runGuidedTour());
+
+  // --- Reset: clean slate between prospects --------------------------------
+  $<HTMLButtonElement>('btn-reset-demo').addEventListener('click', async () => {
+    tourBanner.hidden = true;
+    await setRecording(false);
+    await setConsent(false);
+    verdictPanel.replaceChildren();
+    log('demo reset — recording stopped, consent withdrawn, verdicts cleared');
   });
 
   // --- Operator panel: tenant replay policy + consent records --------------
