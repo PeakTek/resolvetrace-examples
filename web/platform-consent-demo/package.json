@@ -1,0 +1,19 @@
+{
+  "name": "@peaktek/resolvetrace-example-platform-consent-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ResolveTrace Platform sales demo: consent-gated replay (enforced server-side) + operator controls, on @peaktek/resolvetrace-sdk.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 8080",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0"
+  }
+}

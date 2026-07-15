@@ -1,10 +1,11 @@
 /**
- * Helpers shared by the three demo pages (landing / OSS / Platform).
+ * Client factory + DOM/log helpers for the Platform demo.
  *
- * Each page is its own small entry module — a real single-backend app just
- * hardcodes the one client it needs. The only genuinely shared machinery is
- * the DOM/log plumbing and the client factory (with its inspecting transport),
- * so it lives here rather than being copy-pasted per page.
+ * `buildClient` wraps `createClient` in an inspecting transport so replay upload
+ * verdicts (`201 accepted` / `403 consent_required`) can be surfaced live, and
+ * so a short-lived per-visitor key can be re-minted on a `401` (managed
+ * deployment). A plain single-backend app needs none of this — the minimal OSS
+ * quickstart in `web/vite-vanilla-ts` just calls `createClient` directly.
  */
 
 import { createClient, type ResolveTraceClient } from '@peaktek/resolvetrace-sdk';

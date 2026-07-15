@@ -10,10 +10,16 @@ your stack and go.
 
 | Path | Stack | What it demonstrates |
 |---|---|---|
-| [`web/vite-vanilla-ts`](./web/vite-vanilla-ts) | Vite + TypeScript (vanilla, no framework) | Browser SDK talking to a local OSS ingest server end-to-end. |
+| [`web/vite-vanilla-ts`](./web/vite-vanilla-ts) | Vite + TypeScript (vanilla, no framework) | The **smallest** browser SDK → ingest reference: capture, PII scrubbing, masked replay, auto-capture, lifecycle. Works on the self-hosted OSS build. |
+| [`web/platform-consent-demo`](./web/platform-consent-demo) | Vite + TypeScript (vanilla, no framework) | The **ResolveTrace Platform** demo: consent-gated replay the server enforces (`201` vs `403 consent_required`) + an operator panel. Served by a managed backend. |
 
 Planned: `web/react-ts`, `web/next-app-router`, `web/sveltekit`,
 `backend/node-express`, `backend/python-fastapi`, `mobile/react-native`.
+
+> Start with `web/vite-vanilla-ts` to learn the SDK; it's the copy-paste
+> starting point. `web/platform-consent-demo` shows the managed differentiator
+> and is served by a ResolveTrace Platform backend (it provides the `/api/*`
+> contract that example probes for), so it doesn't ship its own container.
 
 ## Folder conventions
 

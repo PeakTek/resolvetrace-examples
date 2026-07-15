@@ -32,7 +32,7 @@ import {
   redactKey,
   renderDiagnostics,
   type Logger,
-} from './shared';
+} from './client';
 import { rawFetch } from './raw-fetch';
 
 const log = makeLogger();

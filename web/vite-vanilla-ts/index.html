@@ -11,84 +11,100 @@
       <header>
         <h1>ResolveTrace demo</h1>
         <p class="subtitle">
-          One browser client (<code>@peaktek/resolvetrace-sdk</code>) against any
-          ResolveTrace backend. Pick a surface to explore — the
-          <strong>OSS features</strong> work on the self-hosted build;
-          <strong>Platform features</strong> need a managed (ResolveTrace
-          Platform) backend.
+          The smallest browser reference for
+          <code>@peaktek/resolvetrace-sdk</code> → a ResolveTrace ingest server:
+          create a client, <code>capture</code> events (PII scrubbed in the
+          browser), record masked replay, and observe the client's diagnostics.
         </p>
+        <div class="config">
+          <span><strong>Endpoint:</strong> <code id="cfg-endpoint">—</code></span>
+          <span><strong>API key:</strong> <code id="cfg-apikey">—</code></span>
+        </div>
       </header>
 
-      <section class="cards">
-        <a class="card" id="card-oss" href="/oss.html">
-          <div class="card-head">
-            <h2>OSS features</h2>
-            <span class="tier tier-oss">OSS</span>
-          </div>
-          <p>
-            The baseline SDK surface on the self-hosted open-source build:
-            <code>track</code> / <code>capture</code>, PII scrubbing, lifecycle,
-            browser auto-capture, per-session support code, and whole-session
-            masked replay.
-          </p>
-          <span class="card-cta">Open OSS demo →</span>
-        </a>
-
-        <a class="card" id="card-platform" href="/platform.html">
-          <div class="card-head">
-            <h2>Platform features</h2>
-            <span class="tier tier-platform">Platform</span>
-          </div>
-          <p>
-            The managed differentiators: <strong>consent-gated replay</strong>
-            with live server verdicts (201 accepted vs 403 consent_required) and
-            an <strong>operator panel</strong> for the tenant's replay policy +
-            consent records.
-          </p>
-          <span class="availability" id="platform-availability">…</span>
-          <span class="card-cta">Open Platform demo →</span>
-        </a>
+      <section class="actions">
+        <h2>Support code &amp; report</h2>
+        <div class="button-row">
+          <span><strong>Support code:</strong>
+            <code id="support-code">(starting session…)</code></span>
+          <button id="btn-copy-code">Copy</button>
+          <button id="btn-report">Report a problem</button>
+        </div>
+        <p class="hint">
+          The server mints a per-session <strong>support code</strong> on session
+          start. "Report a problem" sends a
+          <code>support.report_submitted</code> event carrying that code.
+        </p>
       </section>
 
       <section class="actions">
-        <h2>What's the difference?</h2>
-        <div class="compare">
-          <table>
-            <thead>
-              <tr>
-                <th>Capability</th>
-                <th>OSS (self-hosted)</th>
-                <th>Platform (managed)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Capture, scrubbing, lifecycle, auto-capture</td>
-                <td>✓</td>
-                <td>✓</td>
-              </tr>
-              <tr>
-                <td>Masked session replay</td>
-                <td>whole-session (<code>auto</code>)</td>
-                <td>consent-gated, with user-controlled start/stop</td>
-              </tr>
-              <tr>
-                <td>Server admits replay only with recorded consent</td>
-                <td>—</td>
-                <td>✓ enforced server-side</td>
-              </tr>
-              <tr>
-                <td>Operator controls (tenant replay policy, consent audit)</td>
-                <td>—</td>
-                <td>✓</td>
-              </tr>
-            </tbody>
-          </table>
+        <h2>Session replay</h2>
+        <div class="button-row">
+          <label class="toggle">
+            <input type="checkbox" id="chk-replay-enabled" />
+            Record replay (whole session)
+          </label>
+          <span>mode: <code id="replay-mode">auto</code></span>
         </div>
+        <p class="hint">
+          Masked session replay. In <code>auto</code> mode the whole session is
+          recorded; form inputs are always masked, static text stays readable.
+          Toggling reloads (the policy resolves when the client is created).
+        </p>
+      </section>
+
+      <section class="actions">
+        <h2>Capture events</h2>
+        <div class="button-row">
+          <button id="btn-track-click">track('demo.button_click')</button>
+          <button id="btn-capture-signup">capture(signup.completed)</button>
+          <button id="btn-capture-pii">capture(with PII payload)</button>
+        </div>
+        <p class="hint">
+          The "with PII" button sends an email and SIN inside the attribute bag —
+          the SDK's built-in scrubber redacts them before the request leaves the
+          browser.
+        </p>
+      </section>
+
+      <section class="actions">
+        <h2>Auto-capture (no code needed)</h2>
+        <div class="button-row">
+          <button id="btn-rage">Rage target (click me fast)</button>
+          <button id="btn-dead">Dead target (does nothing)</button>
+          <button id="btn-jserror">Throw JS error</button>
+          <button id="btn-fetch-fail">Failed API call (4xx)</button>
+        </div>
+        <p class="hint">
+          These exercise the SDK's browser auto-capture sources — rage/dead
+          clicks, uncaught JS errors, failed fetches — with no explicit
+          <code>capture()</code> call.
+        </p>
+      </section>
+
+      <section class="actions">
+        <h2>Lifecycle</h2>
+        <div class="button-row">
+          <button id="btn-flush">flush()</button>
+          <button id="btn-diagnostics">getDiagnostics()</button>
+          <button id="btn-shutdown" class="danger">shutdown()</button>
+        </div>
+      </section>
+
+      <section class="diagnostics">
+        <h2>Diagnostics</h2>
+        <pre id="diag-box">(idle)</pre>
+      </section>
+
+      <section class="log">
+        <h2>Event log</h2>
+        <div id="log-box" class="log-box"></div>
       </section>
     </main>
 
+    <!-- Runtime config, written from container env at startup (see main.ts).
+         In `npm run dev` this is the dev placeholder from /public/config.js. -->
     <script src="/config.js"></script>
-    <script type="module" src="/src/entry.ts"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

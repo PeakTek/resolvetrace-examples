@@ -10,6 +10,21 @@ top-level grouping instead.
 ## [Unreleased]
 
 ### Changed
+- **Split into two focused examples.** The one tier-adaptive app became two
+  self-contained examples, each simple for its audience:
+  - [`web/vite-vanilla-ts`](./web/vite-vanilla-ts) is now the **minimal OSS
+    quickstart** — one page, one `main.ts`, `createClient` + `track`/`capture` +
+    PII scrubbing + `auto` masked replay + auto-capture + lifecycle. No tier
+    probe, no key-minting, no inspecting transport (the SDK sends its own uploads
+    with the original `fetch`, so there's no feedback loop to work around).
+  - [`web/platform-consent-demo`](./web/platform-consent-demo) is the new
+    **Platform sales demo** — consent/record toggles, guided demo, live
+    `201`/`403 consent_required` verdicts, and the operator panel. It keeps the
+    capability probe, per-visitor key-minting, and inspecting transport, and is
+    served by a managed backend that provides the `/api/*` contract.
+
+  The landing/OSS-features/Platform-features pages and the shared tier machinery
+  are gone.
 - **Split into three pages.** The single tabbed page is now a landing page
   (`index.html`) linking to an **OSS features** page (`oss.html`, one
   `auto`-mode client) and a **Platform features** page (`platform.html`, one

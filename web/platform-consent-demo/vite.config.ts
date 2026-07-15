@@ -12,10 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // sibling checkout lives somewhere non-default (e.g. Docker build).
 const sdkSrc =
   process.env.RESOLVETRACE_SDK_SRC ??
-  resolve(
-    here,
-    '../../../resolvetrace-contract/sdk/typescript/src/index.ts',
-  );
+  resolve(here, '../../../resolvetrace-contract/sdk/typescript/src/index.ts');
 
 export default defineConfig({
   resolve: {
@@ -23,8 +20,8 @@ export default defineConfig({
       '@peaktek/resolvetrace-sdk': sdkSrc,
     },
   },
-  // Single-page quickstart. Target a baseline that supports ES2022 — all
-  // current evergreen browsers.
+  // The entry module awaits a capability probe at top level. Target a baseline
+  // that supports top-level await + ES2022 — all current evergreen browsers.
   build: {
     target: 'es2022',
   },

@@ -51,6 +51,41 @@ jobs:
         working-directory: resolvetrace-examples/web/vite-vanilla-ts
         run: npm run build
 
+  web-platform-consent-demo:
+    name: web/platform-consent-demo — typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v6
+        with:
+          path: resolvetrace-examples
+
+      - name: Checkout contract (for SDK source)
+        uses: actions/checkout@v6
+        with:
+          repository: PeakTek/resolvetrace-contract
+          path: resolvetrace-contract
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install SDK source deps
+        working-directory: resolvetrace-contract/sdk/typescript
+        run: npm ci --no-audit --no-fund
+
+      - name: Install deps
+        working-directory: resolvetrace-examples/web/platform-consent-demo
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: resolvetrace-examples/web/platform-consent-demo
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: resolvetrace-examples/web/platform-consent-demo
+        run: npm run build
+
   docker:
     name: web/vite-vanilla-ts — docker build
     runs-on: ubuntu-latest
