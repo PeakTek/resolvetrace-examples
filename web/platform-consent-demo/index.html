@@ -9,10 +9,14 @@
   <body>
     <main>
       <header>
-        <h1>
-          ResolveTrace Platform demo
-          <span id="tier-badge" class="tier tier-platform">…</span>
-        </h1>
+        <div class="header-top">
+          <h1>
+            ResolveTrace Platform demo
+            <span id="tier-badge" class="tier tier-platform">…</span>
+          </h1>
+          <button id="theme-toggle" class="theme-toggle" type="button"
+            aria-label="Toggle light/dark theme" title="Toggle theme">◐</button>
+        </div>
         <p class="subtitle">
           The managed (ResolveTrace Platform) differentiators, on one
           <code>manual</code>-mode client: <strong>consent-gated replay</strong>
@@ -82,7 +86,15 @@
           <span class="tour-msg" id="tour-msg">…</span>
         </div>
 
-        <p class="status-line idle" id="replay-status">…</p>
+        <div class="verdict-hero idle" id="verdict-hero">
+          <div class="vh-badge"><span id="vh-code">—</span></div>
+          <div class="vh-body">
+            <div class="vh-title" id="vh-title">Not recording</div>
+            <div class="vh-sub" id="vh-sub">
+              Turn Record on to start uploading replay chunks.
+            </div>
+          </div>
+        </div>
 
         <div class="button-row activity">
           <button id="btn-activity">Generate replay activity</button>

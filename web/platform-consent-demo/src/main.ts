@@ -55,6 +55,22 @@ const badge = $('tier-badge');
 badge.textContent = caps.consent ? 'Platform' : 'OSS';
 badge.className = `tier tier-${caps.consent ? 'platform' : 'oss'}`;
 
+// --- Theme toggle (persisted; defaults to the OS preference) ---------------
+const themeToggle = $<HTMLButtonElement>('theme-toggle');
+const savedTheme = localStorage.getItem('demo.theme');
+if (savedTheme === 'light' || savedTheme === 'dark') {
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+themeToggle.addEventListener('click', () => {
+  const root = document.documentElement;
+  const current =
+    root.getAttribute('data-theme') ??
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = current === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('demo.theme', next);
+});
+
 log(`Client created (replay mode: manual). Endpoint: ${config.endpoint}`, 'success');
 renderDiagnostics(rt);
 rt.track('page_view', { path: window.location.pathname });
@@ -129,7 +145,10 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   const consentStateEl = $('consent-state');
   const recordStateEl = $('record-state');
   const sessionEl = $('consent-session');
-  const statusLine = $('replay-status');
+  const heroEl = $('verdict-hero');
+  const vhCode = $('vh-code');
+  const vhTitle = $('vh-title');
+  const vhSub = $('vh-sub');
   const verdictPanel = $('verdict-panel');
   const opMode = $('op-mode');
   const opRecords = $('op-records');
@@ -138,30 +157,46 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   let consentAllowed = false;
   let recording = false;
 
+  // The verdict hero — the live admission state, at a glance.
+  function setHero(
+    state: 'idle' | 'ok' | 'deny',
+    code: string,
+    title: string,
+    sub: string,
+  ): void {
+    heroEl.className = `verdict-hero ${state}`;
+    vhCode.textContent = code;
+    vhTitle.textContent = title;
+    vhSub.textContent = sub;
+  }
+
+  function pulseHero(): void {
+    heroEl.classList.remove('flip');
+    void heroEl.offsetWidth; // reflow so the animation restarts on each verdict
+    heroEl.classList.add('flip');
+  }
+
   function renderStatus(): void {
     sessionEl.textContent = rt.session.id ?? '—';
     consentStateEl.textContent = consentAllowed ? 'allowed' : 'withdrawn';
     recordStateEl.textContent = recording ? 'recording' : 'stopped';
 
-    let msg: string;
-    let cls: string;
     if (!recording) {
-      msg = 'Record is off — the browser is producing no replay chunks.';
-      cls = 'idle';
+      setHero('idle', '—', 'Not recording',
+        'Turn Record on to start uploading replay chunks.');
     } else if (consentAllowed) {
-      msg = 'Recording + consent allowed → the server admits chunks (expect 201 accepted).';
-      cls = 'ok';
+      setHero('ok', '201', 'Consent allowed — server admitting replay',
+        'Recording; each chunk uploads as 201 accepted.');
     } else {
-      msg =
-        'Recording, but consent is withdrawn → the server rejects chunks (expect 403 consent_required).';
-      cls = 'deny';
+      setHero('deny', '403', 'Consent withdrawn — server rejecting replay',
+        'Recording continues, but the server refuses new chunks (403 consent_required).');
     }
-    statusLine.textContent = msg;
-    statusLine.className = `status-line ${cls}`;
   }
   renderStatus();
 
-  // Live replay upload verdicts (dispatched by shared.ts's inspecting transport).
+  // Live replay upload verdicts (dispatched by the inspecting transport). These
+  // are the SERVER's real responses — they drive the hero (the dramatic flip)
+  // and a scrolling feed of history.
   document.addEventListener('rt:replay-verdict', (e) => {
     const { leg, status, reason } = (e as CustomEvent).detail as {
       leg: string;
@@ -169,6 +204,7 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
       reason?: string;
     };
     const ok = status >= 200 && status < 300;
+
     const line = document.createElement('div');
     line.className = `verdict ${ok ? 'ok' : 'deny'}`;
     const time = new Date().toLocaleTimeString();
@@ -176,6 +212,15 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
       ? `${time}  ✓ replay ${leg}: ${status} (chunk accepted)`
       : `${time}  ✗ replay ${leg}: ${status}${reason ? ` (${reason})` : ''}`;
     verdictPanel.prepend(line);
+
+    if (ok) {
+      setHero('ok', String(status), 'Server admitting replay',
+        'Latest chunk accepted — consent is on file for this session.');
+    } else {
+      setHero('deny', String(status), 'Server rejecting replay',
+        `Latest chunk refused: ${status}${reason ? ` (${reason})` : ''}.`);
+    }
+    pulseHero();
   });
 
   async function recordConsent(granted: boolean): Promise<void> {
