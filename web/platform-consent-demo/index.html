@@ -87,6 +87,22 @@
         <div id="activity-sink" class="sr-only" aria-hidden="true"></div>
       </section>
 
+      <!-- ==================== Core capture (always on) ==================== -->
+      <section class="actions">
+        <h2>Core capture</h2>
+        <p class="hint lead">
+          Events and errors are captured automatically and flow to the portal
+          <strong>regardless of replay consent</strong> — only the rich session
+          <em>replay</em> above is consent-gated. No <code>capture()</code> call
+          needed; try one and watch it land in the portal timeline:
+        </p>
+        <div class="button-row">
+          <button id="btn-throw-error">Throw a JS error</button>
+          <button id="btn-fetch-fail">Failed API call</button>
+        </div>
+        <p class="capture-note" id="capture-note" aria-live="polite">&nbsp;</p>
+      </section>
+
     </main>
 
     <script src="/config.js"></script>

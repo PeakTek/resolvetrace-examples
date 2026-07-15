@@ -22,6 +22,10 @@ top-level grouping instead.
   click. Error/network breadcrumbs stay on (`errorJs` etc. are unchanged).
 
 ### Added
+- **A "Core capture" demonstration** on the Platform demo — *Throw a JS error* /
+  *Failed API call*, framed as "events and errors flow to the portal regardless
+  of replay consent; only the rich session replay is consent-gated". Shows the
+  SDK's auto-capture (`error.js` / `error.api`) works with no `capture()` call.
 - **One-click "Report a problem"** on the Platform demo (the SDK's built-in
   report widget) — carries the recent breadcrumb trail and correlates to the
   session's masked replay by support code. The **Support code** is now

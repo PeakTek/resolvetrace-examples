@@ -98,6 +98,26 @@ if (caps.consent) {
   }
 }
 
+// --- Core capture (always on, independent of replay consent) ---------------
+// Events and errors are captured + sent regardless of consent — only replay
+// chunks are consent-gated. These auto-capture sources work on any backend, so
+// they're wired here (not gated on the Platform activation above).
+const captureNote = $('capture-note');
+$<HTMLButtonElement>('btn-throw-error').addEventListener('click', () => {
+  captureNote.textContent =
+    '✓ threw an uncaught error → captured automatically as error.js. See the portal timeline.';
+  window.setTimeout(() => {
+    throw new TypeError('Demo: cannot read properties of undefined (reading "checkout")');
+  }, 0);
+});
+$<HTMLButtonElement>('btn-fetch-fail').addEventListener('click', () => {
+  captureNote.textContent =
+    '✓ failed API call → captured automatically as error.api. See the portal timeline.';
+  void fetch(`${config.endpoint}/__demo_missing__/${Date.now()}`).catch(() => {
+    /* swallow — the SDK's api source records the error.api outcome */
+  });
+});
+
 // --- Best-effort flush on hide (keep the session across a refresh) ----------
 
 const flushOnHide = (): void => {
