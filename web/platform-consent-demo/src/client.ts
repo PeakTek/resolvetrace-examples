@@ -175,7 +175,19 @@ export async function buildClient(
         sampleRate: 1,
         maskAllText: opts.maskAllText ?? false,
       },
+      // Frustration heuristics are noise in a click-driven demo (every click on a
+      // control that doesn't mutate the DOM reads as a "dead click"). Error and
+      // network breadcrumbs stay on by default — those are the signals worth
+      // seeing in the portal.
+      deadClick: false,
+      rageClick: false,
+      repeatedSubmit: false,
     },
+    // One-click "Report a problem" widget. The report carries the recent
+    // breadcrumb trail (including any auto-captured errors) and correlates to the
+    // session's masked replay by support code — the privacy-preserving way for a
+    // supporter to see what the user experienced.
+    reportWidget: true,
     onError(err) {
       log(`SDK transport error: ${err.message}`, 'error');
       renderDiagnostics(rt);

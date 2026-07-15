@@ -41,10 +41,6 @@ const { rt, config } = await buildClient({
   log,
 });
 
-const badge = $('tier-badge');
-badge.textContent = caps.consent ? 'Platform' : 'OSS';
-badge.className = `tier tier-${caps.consent ? 'platform' : 'oss'}`;
-
 // --- Theme toggle (persisted; defaults to the OS preference) ---------------
 const themeToggle = $<HTMLButtonElement>('theme-toggle');
 const savedTheme = localStorage.getItem('demo.theme');
@@ -73,6 +69,20 @@ const supportPoll = window.setInterval(() => {
     window.clearInterval(supportPoll);
   }
 }, 500);
+
+// One-click copy of the support code.
+const copyHint = $('copy-hint');
+$<HTMLButtonElement>('support-code-copy').addEventListener('click', () => {
+  const code = rt.session.supportCode;
+  if (!code) return;
+  void navigator.clipboard?.writeText(code).then(
+    () => {
+      copyHint.textContent = 'Copied ✓';
+      window.setTimeout(() => (copyHint.textContent = 'Copy'), 1500);
+    },
+    () => (copyHint.textContent = 'Copy failed'),
+  );
+});
 
 if (caps.consent) {
   activatePlatform(rt, log);
@@ -137,8 +147,15 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   const vhSub = $('vh-sub');
   const sink = $('activity-sink');
 
-  // The single toggle couples consent + recording (like a real integration).
+  // Two bits of state: whether a recording span is active (client-side), and
+  // what the app currently believes the server should do with chunks — used to
+  // ignore stale verdicts from the server's ~5s consent-verdict cache.
   let recording = false;
+  let expecting: 'accept' | 'reject' = 'accept';
+
+  // Guided-demo run state, so Reset can abort a tour cleanly.
+  let tourRunning = false;
+  let tourAbort = false;
 
   // Invisible DOM churn so rrweb always has mutations → replay chunks keep
   // uploading. The guided demo calls this; there's no user-facing "activity"
@@ -168,26 +185,38 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     heroEl.classList.add('flip');
   }
 
+  // The hero reflects the CURRENT intent immediately; verdicts (below) confirm
+  // it with a pulse. Keeping these consistent is what stops the "still shows 200
+  // after I turned it off / withdrew consent" desync.
   function renderStatus(): void {
     replayStateEl.textContent = recording ? 'recording' : 'off';
     if (!recording) {
       setHero('idle', '—', 'Session replay off',
         'Turn Session replay on to record — the server admits chunks only with consent on file.');
-    } else {
+    } else if (expecting === 'accept') {
       setHero('ok', '201', 'Recording with consent',
         'Consent is on file and the session is recording — chunks upload as 201 accepted.');
+    } else {
+      setHero('deny', '403', 'Recording — consent withdrawn',
+        'The browser is still recording, but the server refuses new chunks (403 consent_required).');
     }
   }
   renderStatus();
 
-  // The server's real replay verdicts (dispatched by the inspecting transport)
-  // drive the hero — the flip between admit (201) and refuse (403).
+  // The server's real replay verdicts confirm the hero with a pulse. Ignore
+  // verdicts that no longer apply: none while stopped, and none that contradict
+  // the current intent (a stale 200 from the ~5s cache right after a withdrawal,
+  // or a stale 403 right after re-consent).
   document.addEventListener('rt:replay-verdict', (e) => {
+    if (!recording) return;
     const { status, reason } = (e as CustomEvent).detail as {
       status: number;
       reason?: string;
     };
-    if (status >= 200 && status < 300) {
+    const ok = status >= 200 && status < 300;
+    if (expecting === 'accept' && !ok) return;
+    if (expecting === 'reject' && ok) return;
+    if (ok) {
       setHero('ok', String(status), 'Server admitting replay',
         'Latest chunk accepted — consent is on file for this session.');
     } else {
@@ -219,7 +248,9 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   // (or stop + withdraw). This is what a real app wires to an "Allow replay" UI.
   async function setReplay(on: boolean): Promise<void> {
     recording = on;
+    expecting = 'accept';
     replayToggle.checked = on;
+    renderStatus(); // reflect intent immediately (off → idle; on → admitting)
     if (on) {
       await recordConsent(true);
       await rt.replay.start();
@@ -243,7 +274,11 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   const sleep = (ms: number): Promise<void> =>
     new Promise((r) => window.setTimeout(r, ms));
 
-  /** Resolve when the next replay verdict matches `want` (or on timeout). */
+  /**
+   * Resolve when the next replay verdict matches `want` — or on timeout, or when
+   * the tour is aborted (so Reset stops the demo promptly rather than hanging on
+   * a pending verdict).
+   */
   function waitForVerdict(want: 'accept' | 'reject', timeoutMs = 15000): Promise<boolean> {
     return new Promise((resolve) => {
       let done = false;
@@ -252,6 +287,7 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
         done = true;
         document.removeEventListener('rt:replay-verdict', onVerdict);
         window.clearTimeout(timer);
+        window.clearInterval(abortPoll);
         resolve(matched);
       };
       const onVerdict = (e: Event): void => {
@@ -260,11 +296,17 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
         if ((want === 'accept' && ok) || (want === 'reject' && !ok)) finish(true);
       };
       const timer = window.setTimeout(() => finish(false), timeoutMs);
+      const abortPoll = window.setInterval(() => {
+        if (tourAbort) finish(false);
+      }, 150);
       document.addEventListener('rt:replay-verdict', onVerdict);
     });
   }
 
   async function runGuidedTour(): Promise<void> {
+    if (tourRunning) return;
+    tourRunning = true;
+    tourAbort = false;
     btnGuided.disabled = true;
     replayToggle.disabled = true;
     tourBanner.hidden = false;
@@ -275,49 +317,81 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     };
 
     try {
-      narrate(1, 'A user allows session replay — consent is recorded and the browser starts capturing (expecting 201 accepted)…');
+      // Step 1 — allow consent + record → server admits (201).
+      if (tourAbort) return;
+      expecting = 'accept';
       await recordConsent(true);
+      if (tourAbort) return;
       await rt.replay.start();
       recording = true;
       replayToggle.checked = true;
       renderStatus();
       pokeActivity();
+      narrate(1, 'A user allows session replay — consent is recorded and the browser starts capturing (expecting 201 accepted)…');
       const a1 = await waitForVerdict('accept');
+      if (tourAbort) return;
       narrate(1, a1
         ? '✓ Server accepted the chunk (201). Replay is stored for this consented session.'
         : '…still waiting for the first chunk — replay uploads every few seconds.');
       await sleep(2600);
+      if (tourAbort) return;
 
+      // Step 2 — withdraw consent, keep recording → server refuses (403).
+      expecting = 'reject';
+      renderStatus();
       narrate(2, 'Now the user withdraws consent — but the browser is still recording. Watch the server refuse new chunks on its own…');
       await recordConsent(false);
       pokeActivity();
       const a2 = await waitForVerdict('reject');
+      if (tourAbort) return;
       narrate(2, a2
         ? '✗ Server rejected the chunk (403 consent_required). Enforcement is server-side — the client cannot override it.'
         : '…a just-withdrawn grant can linger in the server’s verdict cache for ~5s.');
       await sleep(2600);
+      if (tourAbort) return;
 
+      // Step 3 — restore consent → server admits again (201).
+      expecting = 'accept';
+      renderStatus();
       narrate(3, 'Consent restored — the server admits chunks again within ~5s…');
       await recordConsent(true);
       pokeActivity();
       const a3 = await waitForVerdict('accept');
+      if (tourAbort) return;
       narrate(3, a3
         ? '✓ Back to 201 accepted. Consent is the switch; the data plane honors it live.'
         : '…waiting for the next chunk after re-consent.');
       await sleep(2600);
+      if (tourAbort) return;
 
       narrate(4, 'That’s the Platform difference: consent enforced in the data plane, recorded as an auditable decision, reversible in real time. (Left on and consented.)');
     } finally {
+      tourRunning = false;
       replayToggle.disabled = false;
       btnGuided.disabled = false;
+      // If Reset aborted us mid-tour, make sure we don't leave a dangling
+      // recording span — stop and return to the idle state.
+      if (tourAbort) {
+        rt.replay.stop();
+        recording = false;
+        expecting = 'accept';
+        replayToggle.checked = false;
+        renderStatus();
+        void recordConsent(false);
+      }
     }
   }
   btnGuided.addEventListener('click', () => void runGuidedTour());
 
-  // --- Reset: clean slate between prospects --------------------------------
+  // --- Reset: stop everything (aborts a running guided demo) ---------------
   $<HTMLButtonElement>('btn-reset-demo').addEventListener('click', async () => {
     tourBanner.hidden = true;
-    await setReplay(false);
+    if (tourRunning) {
+      // Signal the tour to bail; its `finally` stops recording + resets state.
+      tourAbort = true;
+    } else {
+      await setReplay(false);
+    }
     log('demo reset — session replay off, consent withdrawn');
   });
 }

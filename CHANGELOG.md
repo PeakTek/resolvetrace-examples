@@ -9,7 +9,26 @@ top-level grouping instead.
 
 ## [Unreleased]
 
+### Fixed
+- **Platform demo verdict hero stayed out of sync.** The hero now ignores replay
+  verdicts that no longer apply — none while stopped (so it no longer stuck at
+  `200` after you turned Session replay off), and none that contradict the
+  current intent (a stale `200` from the server's ~5s consent-verdict cache right
+  after a withdrawal). **Reset** now aborts a running guided demo cleanly
+  (stops recording, re-enables the toggle) instead of fighting it.
+- **Portal timeline was noisy with dead-click events.** Disabled the frustration
+  heuristics (`deadClick` / `rageClick` / `repeatedSubmit`) in the Platform demo
+  — every click on a control that doesn't mutate the DOM was reading as a dead
+  click. Error/network breadcrumbs stay on (`errorJs` etc. are unchanged).
+
+### Added
+- **One-click "Report a problem"** on the Platform demo (the SDK's built-in
+  report widget) — carries the recent breadcrumb trail and correlates to the
+  session's masked replay by support code. The **Support code** is now
+  click-to-copy.
+
 ### Changed
+- Removed the redundant `PLATFORM` badges from the Platform demo.
 - **Simplified the Platform demo to its essence.** Merged the two switches
   (consent + record) into **one** `Session replay` toggle — one click records
   consent and starts recording, like a real integration. The enforcement story

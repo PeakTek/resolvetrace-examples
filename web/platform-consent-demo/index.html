@@ -10,10 +10,7 @@
     <main>
       <header>
         <div class="header-top">
-          <h1>
-            ResolveTrace Platform demo
-            <span id="tier-badge" class="tier tier-platform">…</span>
-          </h1>
+          <h1>ResolveTrace Platform demo</h1>
           <button id="theme-toggle" class="theme-toggle" type="button"
             aria-label="Toggle light/dark theme" title="Toggle theme">◐</button>
         </div>
@@ -23,7 +20,10 @@
           recording is admitted only for sessions with recorded consent.
         </p>
         <div class="config">
-          <span><strong>Support code:</strong> <code id="support-code">…</code></span>
+          <button id="support-code-copy" class="chip-btn" type="button" title="Copy support code">
+            <strong>Support code:</strong> <code id="support-code">…</code>
+            <span class="copy-hint" id="copy-hint">Copy</span>
+          </button>
         </div>
       </header>
 
@@ -36,7 +36,7 @@
 
       <!-- ==================== Consent-gated replay ==================== -->
       <section class="actions is-platform" id="sec-consent">
-        <h2>Consent-gated replay <span class="badge">Platform</span></h2>
+        <h2>Consent-gated replay</h2>
 
         <div class="why-panel">
           <strong>Why this matters:</strong> the server enforces replay consent in
