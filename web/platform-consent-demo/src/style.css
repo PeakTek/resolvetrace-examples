@@ -98,6 +98,20 @@ main {
   gap: 1.1rem;
 }
 
+/* Off-screen but rendered — the guided demo mutates this so rrweb keeps
+   producing replay chunks, without a visible "activity" control. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- Header --------------------------------------------------------------- */
 
 header {
@@ -177,9 +191,7 @@ code {
 
 /* --- Section cards -------------------------------------------------------- */
 
-.actions,
-.diagnostics,
-.log {
+.actions {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -388,116 +400,6 @@ button.secondary:hover:not(:disabled) { border-color: var(--accent); filter: non
   100% { transform: scale(1); }
 }
 
-/* --- Activity affordance -------------------------------------------------- */
-
-.activity { margin-top: 0.5rem; }
-.activity input {
-  font: inherit;
-  padding: 0.5rem 0.7rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.activity input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.activity-feed {
-  margin: 0.45rem 0 0;
-  max-height: 120px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-.activity-row { padding: 0.12rem 0; }
-
-.mini-head {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 1.1rem 0 0.4rem;
-}
-.mini-head code { font-size: 0.9em; }
-
-/* --- Verdict feed (history of uploads) ------------------------------------ */
-
-.verdict-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  max-height: 220px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-}
-.verdict {
-  padding: 0.22rem 0.5rem;
-  border-radius: 6px;
-  background: var(--surface-2);
-}
-.verdict.idle { color: var(--muted); background: transparent; }
-.verdict.ok { color: var(--accept); background: var(--accept-soft); }
-.verdict.deny { color: var(--deny); background: var(--deny-soft); }
-
-.platform-note { margin-top: 1rem; }
-
-/* --- Operator records ----------------------------------------------------- */
-
-.records {
-  margin: 0.25rem 0 0;
-  max-height: 220px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 0.76rem;
-  color: var(--muted);
-}
-.record {
-  padding: 0.2rem 0;
-  border-bottom: 1px solid var(--border-soft);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* --- Diagnostics + event log --------------------------------------------- */
-
-pre {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  margin: 0;
-  overflow-x: auto;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--ink);
-}
-
-.log-box {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.5rem 0.75rem;
-  max-height: 300px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-}
-.log-line {
-  padding: 0.2rem 0;
-  border-bottom: 1px solid var(--border-soft);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.log-line:last-child { border-bottom: none; }
-.log-time { color: var(--muted); margin-right: 0.5rem; }
-.log-level { margin-right: 0.5rem; font-weight: 700; }
-.log-line.info .log-level { color: var(--accent); }
-.log-line.success .log-level { color: var(--accept); }
-.log-line.warn .log-level { color: var(--warn); }
-.log-line.error .log-level { color: var(--deny); }
-
 /* --- Teaser banner (OSS backend) ----------------------------------------- */
 
 .teaser-banner {
@@ -508,10 +410,6 @@ pre {
   font-size: 0.9rem;
 }
 .is-teaser { opacity: 0.55; }
-.is-teaser .platform-note { display: none; }
-.is-teaser .verdict-panel,
-.is-teaser .records,
-.is-teaser .activity-feed { display: none; }
 
 /* --- Responsive ----------------------------------------------------------- */
 

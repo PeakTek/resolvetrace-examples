@@ -25,14 +25,7 @@
 
 import type { ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
 import { probeCapabilities } from './capabilities';
-import {
-  $,
-  buildClient,
-  makeLogger,
-  redactKey,
-  renderDiagnostics,
-  type Logger,
-} from './client';
+import { $, buildClient, makeLogger, type Logger } from './client';
 import { rawFetch } from './raw-fetch';
 
 const log = makeLogger();
@@ -47,9 +40,6 @@ const { rt, config } = await buildClient({
   replayEnabled: true,
   log,
 });
-
-$('cfg-endpoint').textContent = config.endpoint;
-$('cfg-apikey').textContent = redactKey(config.apiKey);
 
 const badge = $('tier-badge');
 badge.textContent = caps.consent ? 'Platform' : 'OSS';
@@ -72,7 +62,6 @@ themeToggle.addEventListener('click', () => {
 });
 
 log(`Client created (replay mode: manual). Endpoint: ${config.endpoint}`, 'success');
-renderDiagnostics(rt);
 rt.track('page_view', { path: window.location.pathname });
 
 // Surface the per-session support code (this is a live session).
@@ -90,7 +79,7 @@ if (caps.consent) {
   log('consent-gated replay active', 'success');
 } else {
   $('platform-teaser-banner').hidden = false;
-  for (const id of ['sec-consent', 'sec-operator']) {
+  for (const id of ['sec-consent']) {
     const sec = $(id);
     sec.classList.add('is-teaser');
     sec
@@ -140,22 +129,25 @@ async function api(path: string, init?: RequestInit): Promise<ApiResult> {
 function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   const subj = subjectId();
 
-  const consentToggle = $<HTMLInputElement>('toggle-consent');
-  const recordToggle = $<HTMLInputElement>('toggle-record');
-  const consentStateEl = $('consent-state');
-  const recordStateEl = $('record-state');
-  const sessionEl = $('consent-session');
+  const replayToggle = $<HTMLInputElement>('toggle-replay');
+  const replayStateEl = $('replay-state');
   const heroEl = $('verdict-hero');
   const vhCode = $('vh-code');
   const vhTitle = $('vh-title');
   const vhSub = $('vh-sub');
-  const verdictPanel = $('verdict-panel');
-  const opMode = $('op-mode');
-  const opRecords = $('op-records');
+  const sink = $('activity-sink');
 
-  // Two independent bits of state — see the file header.
-  let consentAllowed = false;
+  // The single toggle couples consent + recording (like a real integration).
   let recording = false;
+
+  // Invisible DOM churn so rrweb always has mutations → replay chunks keep
+  // uploading. The guided demo calls this; there's no user-facing "activity"
+  // control (that only ever confused — its job was to feed the recorder).
+  let pokeN = 0;
+  function pokeActivity(): void {
+    pokeN += 1;
+    sink.textContent = `activity ${pokeN}`;
+  }
 
   // The verdict hero — the live admission state, at a glance.
   function setHero(
@@ -177,43 +169,25 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   }
 
   function renderStatus(): void {
-    sessionEl.textContent = rt.session.id ?? '—';
-    consentStateEl.textContent = consentAllowed ? 'allowed' : 'withdrawn';
-    recordStateEl.textContent = recording ? 'recording' : 'stopped';
-
+    replayStateEl.textContent = recording ? 'recording' : 'off';
     if (!recording) {
-      setHero('idle', '—', 'Not recording',
-        'Turn Record on to start uploading replay chunks.');
-    } else if (consentAllowed) {
-      setHero('ok', '201', 'Consent allowed — server admitting replay',
-        'Recording; each chunk uploads as 201 accepted.');
+      setHero('idle', '—', 'Session replay off',
+        'Turn Session replay on to record — the server admits chunks only with consent on file.');
     } else {
-      setHero('deny', '403', 'Consent withdrawn — server rejecting replay',
-        'Recording continues, but the server refuses new chunks (403 consent_required).');
+      setHero('ok', '201', 'Recording with consent',
+        'Consent is on file and the session is recording — chunks upload as 201 accepted.');
     }
   }
   renderStatus();
 
-  // Live replay upload verdicts (dispatched by the inspecting transport). These
-  // are the SERVER's real responses — they drive the hero (the dramatic flip)
-  // and a scrolling feed of history.
+  // The server's real replay verdicts (dispatched by the inspecting transport)
+  // drive the hero — the flip between admit (201) and refuse (403).
   document.addEventListener('rt:replay-verdict', (e) => {
-    const { leg, status, reason } = (e as CustomEvent).detail as {
-      leg: string;
+    const { status, reason } = (e as CustomEvent).detail as {
       status: number;
       reason?: string;
     };
-    const ok = status >= 200 && status < 300;
-
-    const line = document.createElement('div');
-    line.className = `verdict ${ok ? 'ok' : 'deny'}`;
-    const time = new Date().toLocaleTimeString();
-    line.textContent = ok
-      ? `${time}  ✓ replay ${leg}: ${status} (chunk accepted)`
-      : `${time}  ✗ replay ${leg}: ${status}${reason ? ` (${reason})` : ''}`;
-    verdictPanel.prepend(line);
-
-    if (ok) {
+    if (status >= 200 && status < 300) {
       setHero('ok', String(status), 'Server admitting replay',
         'Latest chunk accepted — consent is on file for this session.');
     } else {
@@ -223,11 +197,17 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     pulseHero();
   });
 
+  // Low-level primitives. The single toggle couples them; the guided demo drives
+  // them independently to show the server enforce consent on its own.
   async function recordConsent(granted: boolean): Promise<void> {
-    const sessionId = rt.session.id;
     const { status } = await api('/consent', {
       method: 'POST',
-      body: JSON.stringify({ subjectId: subj, sessionId, granted, source: 'prompt' }),
+      body: JSON.stringify({
+        subjectId: subj,
+        sessionId: rt.session.id,
+        granted,
+        source: 'prompt',
+      }),
     });
     log(
       `consent ${granted ? 'allowed' : 'withdrawn'} → POST /api/consent ${status}`,
@@ -235,60 +215,26 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     );
   }
 
-  // State transitions, shared by the manual toggles and the guided tour.
-  async function setConsent(allowed: boolean): Promise<void> {
-    consentAllowed = allowed;
-    consentToggle.checked = allowed;
-    renderStatus();
-    await recordConsent(allowed);
-    await refreshRecords();
-  }
-
-  async function setRecording(on: boolean): Promise<void> {
+  // The single user-facing control: one click = record consent + start recording
+  // (or stop + withdraw). This is what a real app wires to an "Allow replay" UI.
+  async function setReplay(on: boolean): Promise<void> {
     recording = on;
-    recordToggle.checked = on;
+    replayToggle.checked = on;
     if (on) {
-      const started = await rt.replay.start();
-      log(
-        started
-          ? 'replay.start() → recording span began'
-          : 'replay.start() was a no-op (already recording / policy gate)',
-        started ? 'success' : 'warn',
-      );
+      await recordConsent(true);
+      await rt.replay.start();
     } else {
       rt.replay.stop();
-      log('replay.stop() → recording span ended', 'warn');
+      await recordConsent(false);
     }
     renderStatus();
   }
+  replayToggle.addEventListener('change', () => void setReplay(replayToggle.checked));
 
-  // --- Toggle 1: Replay consent (Allow ⇄ Withdraw) -------------------------
-  consentToggle.addEventListener('change', () => void setConsent(consentToggle.checked));
-  // --- Toggle 2: Record replay (Start ⇄ Stop) ------------------------------
-  recordToggle.addEventListener('change', () => void setRecording(recordToggle.checked));
-
-  $<HTMLButtonElement>('btn-clear-verdicts').addEventListener('click', () => {
-    verdictPanel.replaceChildren();
-  });
-
-  // --- Activity affordance: give replay something to record ----------------
-  // rrweb snapshots DOM mutations + interactions; this appends masked rows so
-  // there's a steady stream of chunks to watch the server admit / reject.
-  const activityFeed = $('activity-feed');
-  let activityN = 0;
-  function addActivity(): void {
-    activityN += 1;
-    const row = document.createElement('div');
-    row.className = 'activity-row';
-    row.textContent = `activity #${activityN} @ ${new Date().toLocaleTimeString()}`;
-    activityFeed.prepend(row);
-  }
-  $<HTMLButtonElement>('btn-activity').addEventListener('click', addActivity);
-
-  // --- Guided tour: auto-drive the enforcement story -----------------------
-  // Each step sets state, then waits for the SERVER's actual next verdict
-  // (accept/reject) rather than a fixed delay — so the narration tracks the real
-  // data-plane decision (incl. the ~5s verdict-cache lag on a fresh withdrawal).
+  // --- Guided demo: the enforcement story ----------------------------------
+  // Drives consent + recording INDEPENDENTLY (which a real one-click UI does
+  // not) so you can watch the server admit, refuse, then re-admit replay as
+  // consent changes — each step paced by the server's actual verdict.
   const btnGuided = $<HTMLButtonElement>('btn-guided-demo');
   const tourBanner = $('tour-banner');
   const tourStep = $('tour-step');
@@ -320,10 +266,8 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
 
   async function runGuidedTour(): Promise<void> {
     btnGuided.disabled = true;
-    consentToggle.disabled = true;
-    recordToggle.disabled = true;
+    replayToggle.disabled = true;
     tourBanner.hidden = false;
-    verdictPanel.replaceChildren();
 
     const narrate = (n: number, msg: string): void => {
       tourStep.textContent = `Step ${n} / 4`;
@@ -331,38 +275,40 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
     };
 
     try {
-      narrate(1, 'Consent allowed, recording on — asking the server to admit replay chunks (expecting 201 accepted)…');
-      await setConsent(true);
-      await setRecording(true);
-      addActivity();
+      narrate(1, 'A user allows session replay — consent is recorded and the browser starts capturing (expecting 201 accepted)…');
+      await recordConsent(true);
+      await rt.replay.start();
+      recording = true;
+      replayToggle.checked = true;
+      renderStatus();
+      pokeActivity();
       const a1 = await waitForVerdict('accept');
       narrate(1, a1
         ? '✓ Server accepted the chunk (201). Replay is stored for this consented session.'
         : '…still waiting for the first chunk — replay uploads every few seconds.');
       await sleep(2600);
 
-      narrate(2, 'Now withdrawing consent while STILL recording — the browser keeps capturing, but the server should refuse new chunks…');
-      await setConsent(false);
-      addActivity();
+      narrate(2, 'Now the user withdraws consent — but the browser is still recording. Watch the server refuse new chunks on its own…');
+      await recordConsent(false);
+      pokeActivity();
       const a2 = await waitForVerdict('reject');
       narrate(2, a2
         ? '✗ Server rejected the chunk (403 consent_required). Enforcement is server-side — the client cannot override it.'
         : '…a just-withdrawn grant can linger in the server’s verdict cache for ~5s.');
       await sleep(2600);
 
-      narrate(3, 'Restoring consent — the server should admit chunks again within ~5s…');
-      await setConsent(true);
-      addActivity();
+      narrate(3, 'Consent restored — the server admits chunks again within ~5s…');
+      await recordConsent(true);
+      pokeActivity();
       const a3 = await waitForVerdict('accept');
       narrate(3, a3
         ? '✓ Back to 201 accepted. Consent is the switch; the data plane honors it live.'
         : '…waiting for the next chunk after re-consent.');
       await sleep(2600);
 
-      narrate(4, 'That’s the Platform difference: consent enforced in the data plane, recorded as an auditable decision, reversible in real time. (Left recording ON, consent ALLOWED.)');
+      narrate(4, 'That’s the Platform difference: consent enforced in the data plane, recorded as an auditable decision, reversible in real time. (Left on and consented.)');
     } finally {
-      consentToggle.disabled = false;
-      recordToggle.disabled = false;
+      replayToggle.disabled = false;
       btnGuided.disabled = false;
     }
   }
@@ -371,56 +317,7 @@ function activatePlatform(rt: ResolveTraceClient, log: Logger): void {
   // --- Reset: clean slate between prospects --------------------------------
   $<HTMLButtonElement>('btn-reset-demo').addEventListener('click', async () => {
     tourBanner.hidden = true;
-    await setRecording(false);
-    await setConsent(false);
-    verdictPanel.replaceChildren();
-    log('demo reset — recording stopped, consent withdrawn, verdicts cleared');
+    await setReplay(false);
+    log('demo reset — session replay off, consent withdrawn');
   });
-
-  // --- Operator panel: tenant replay policy + consent records --------------
-  async function refreshMode(): Promise<void> {
-    const { status, body } = await api('/replay-mode');
-    opMode.textContent =
-      status >= 200 && status < 300 ? String(body.mode ?? '?') : `error ${status}`;
-  }
-
-  async function setMode(mode: 'auto' | 'manual' | 'off'): Promise<void> {
-    const { status } = await api('/replay-mode', {
-      method: 'PUT',
-      body: JSON.stringify({ mode }),
-    });
-    log(
-      `operator set replay mode → ${mode} (PUT /api/replay-mode ${status})`,
-      status >= 200 && status < 300 ? 'success' : 'error',
-    );
-    await refreshMode();
-  }
-
-  async function refreshRecords(): Promise<void> {
-    const { status, body } = await api('/consent-records?limit=20');
-    if (status < 200 || status >= 300) {
-      opRecords.textContent = `error ${status}`;
-      return;
-    }
-    const records = (body.records as Array<Record<string, unknown>>) ?? [];
-    opRecords.replaceChildren();
-    if (records.length === 0) {
-      opRecords.textContent = '(no consent records yet)';
-      return;
-    }
-    for (const r of records) {
-      const row = document.createElement('div');
-      row.className = 'record';
-      row.textContent = `${r.granted ? '✓' : '✗'} ${String(r.source)} · subj ${String(r.subjectId).slice(0, 8)} · sess ${r.sessionId ? String(r.sessionId).slice(0, 10) : '—'} · ${String(r.recordedAt)}`;
-      opRecords.append(row);
-    }
-  }
-
-  $<HTMLButtonElement>('btn-op-auto').addEventListener('click', () => void setMode('auto'));
-  $<HTMLButtonElement>('btn-op-manual').addEventListener('click', () => void setMode('manual'));
-  $<HTMLButtonElement>('btn-op-off').addEventListener('click', () => void setMode('off'));
-  $<HTMLButtonElement>('btn-op-refresh').addEventListener('click', () => void refreshRecords());
-
-  void refreshMode();
-  void refreshRecords();
 }

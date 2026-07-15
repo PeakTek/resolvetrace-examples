@@ -10,6 +10,14 @@ top-level grouping instead.
 ## [Unreleased]
 
 ### Changed
+- **Simplified the Platform demo to its essence.** Merged the two switches
+  (consent + record) into **one** `Session replay` toggle — one click records
+  consent and starts recording, like a real integration. The enforcement story
+  (recording continues while the server refuses on withdrawal → `403`) now lives
+  entirely in the guided demo, which drives the two independently. Removed the
+  operator panel, the diagnostics dump, the event log, the raw verdict feed, the
+  "Generate replay activity" button, and the Endpoint/API-key readouts — leaving
+  the why-panel, the one toggle, the guided demo, and the verdict hero.
 - **Split into two focused examples.** The one tier-adaptive app became two
   self-contained examples, each simple for its audience:
   - [`web/vite-vanilla-ts`](./web/vite-vanilla-ts) is now the **minimal OSS
