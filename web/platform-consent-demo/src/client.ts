@@ -1,11 +1,10 @@
 /**
- * Client factory + DOM/log helpers for the Platform demo.
+ * Client factory + DOM/log helpers for the demo.
  *
- * `buildClient` wraps `createClient` in an inspecting transport so replay upload
- * verdicts (`201 accepted` / `403 consent_required`) can be surfaced live, and
- * so a short-lived per-visitor key can be re-minted on a `401` (managed
- * deployment). A plain single-backend app needs none of this — the minimal OSS
- * quickstart in `web/vite-vanilla-ts` just calls `createClient` directly.
+ * `buildClient` wraps `createClient` in a thin transport that re-mints a
+ * short-lived per-visitor key on a `401` (managed deployment). A plain
+ * single-backend app needs none of this — the minimal OSS quickstart in
+ * `web/vite-vanilla-ts` just calls `createClient` directly.
  */
 
 import { createClient, type ResolveTraceClient } from '@peaktek/resolvetrace-sdk';
@@ -61,12 +60,11 @@ export interface BuiltClient {
 
 export interface BuildClientOptions {
   /**
-   * SDK replay trigger model. This is the APP's choice and each page hardcodes
-   * the one that matches its backend: the OSS page uses `'auto'` (whole-session,
-   * all-or-nothing); the Platform page uses `'manual'` (consent-gated —
-   * a Platform-only capability, driven by `replay.start()` / `replay.stop()`).
+   * SDK replay trigger model. This is the APP's choice. This demo uses
+   * `'review'`: user-driven start/stop spans that BUFFER locally and upload only
+   * on `client.replay.submit()`. (The minimal OSS quickstart uses `'auto'`.)
    */
-  replayMode: 'auto' | 'off' | 'manual';
+  replayMode: 'auto' | 'off' | 'manual' | 'review';
   /** Master replay switch. Default true. */
   replayEnabled?: boolean;
   /** rrweb `maskAllText`: false keeps static text readable; inputs stay masked. */
@@ -133,33 +131,6 @@ export async function buildClient(
       }
     }
 
-    try {
-      if (url.includes('/v1/replay/')) {
-        const leg = url.includes('signed-url')
-          ? 'signed-url'
-          : url.includes('complete')
-            ? 'complete'
-            : 'replay';
-        let reason: string | undefined;
-        if (!res.ok) {
-          const b = (await res.clone().json().catch(() => null)) as
-            | { reason?: string; error?: string }
-            | null;
-          reason = b?.reason ?? b?.error;
-        }
-        log(
-          `replay ${leg}: ${res.status}${reason ? ` (${reason})` : ''}`,
-          res.ok ? 'success' : 'warn',
-        );
-        document.dispatchEvent(
-          new CustomEvent('rt:replay-verdict', {
-            detail: { leg, status: res.status, reason },
-          }),
-        );
-      }
-    } catch {
-      /* never break the transport over instrumentation */
-    }
     return res;
   };
 
@@ -183,11 +154,9 @@ export async function buildClient(
       rageClick: false,
       repeatedSubmit: false,
     },
-    // One-click "Report a problem" widget. The report carries the recent
-    // breadcrumb trail (including any auto-captured errors) and correlates to the
-    // session's masked replay by support code — the privacy-preserving way for a
-    // supporter to see what the user experienced.
-    reportWidget: true,
+    // The "Report a problem" widget is mounted DIRECTLY in main.ts (not via this
+    // config) so it can receive the record-mode + onRecordStart consent hook,
+    // which are functions and can't ride the serializable client config.
     onError(err) {
       log(`SDK transport error: ${err.message}`, 'error');
       renderDiagnostics(rt);

@@ -3,21 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ResolveTrace Platform demo</title>
+    <title>ResolveTrace demo</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <main>
       <header>
         <div class="header-top">
-          <h1>ResolveTrace Platform demo</h1>
+          <h1>ResolveTrace demo</h1>
           <button id="theme-toggle" class="theme-toggle" type="button"
             aria-label="Toggle light/dark theme" title="Toggle theme">◐</button>
         </div>
         <p class="subtitle">
-          The managed (ResolveTrace Platform) differentiator:
-          <strong>consent-gated session replay</strong> the server enforces — a
-          recording is admitted only for sessions with recorded consent.
+          Hit a bug? <strong>Record the session, review the clips, and submit
+          only what you want.</strong> Nothing is uploaded until you press Submit.
         </p>
         <div class="config">
           <button id="support-code-copy" class="chip-btn" type="button" title="Copy support code">
@@ -27,64 +26,16 @@
         </div>
       </header>
 
-      <div class="teaser-banner" id="platform-teaser-banner" hidden>
-        This demo is running against an <strong>OSS backend</strong>, so the
-        controls below are disabled previews. Deploy it against
-        <strong>ResolveTrace Platform</strong> to enable consent-gated replay and
-        the operator controls.
-      </div>
-
-      <!-- ==================== Consent-gated replay ==================== -->
-      <section class="actions is-platform" id="sec-consent">
-        <h2>Consent-gated replay</h2>
-
-        <div class="why-panel">
-          <strong>Why this matters:</strong> the server enforces replay consent in
-          the data plane — a recording is admitted <em>only</em> for sessions with
-          recorded consent, every decision is captured as an auditable record, and
-          withdrawal takes effect in real time. This is what maps session replay to
-          GDPR / CCPA / PIPEDA consent obligations.
-        </div>
-
+      <!-- ==================== Record an issue ==================== -->
+      <section class="actions">
+        <h2>Record an issue</h2>
         <p class="hint lead">
-          One switch, like a real integration: allowing session replay records the
-          end-user's consent and starts recording.
-          <strong>Run guided demo</strong> shows what makes it Platform — the
-          server admitting, then refusing, replay as consent changes — in ~30s.
+          Open <strong>Report / record an issue</strong> (bottom-right) and press
+          <strong>Record</strong>. A red frame around the screen means you're
+          recording. <span id="tier-note"></span>
+          When you're happy, press <strong>Submit</strong> — only then do the
+          clips upload; <strong>Discard</strong> throws them away.
         </p>
-
-        <div class="switch-row">
-          <label class="switch">
-            <input type="checkbox" id="toggle-replay" />
-            <span class="slider"></span>
-            <span class="switch-label">
-              Session replay — <strong id="replay-state">off</strong>
-            </span>
-          </label>
-        </div>
-
-        <div class="button-row demo-controls">
-          <button id="btn-guided-demo">▶ Run guided demo</button>
-          <button id="btn-reset-demo" class="secondary">Reset demo</button>
-        </div>
-
-        <div class="tour-banner" id="tour-banner" hidden>
-          <span class="tour-step" id="tour-step">Step 1 / 4</span>
-          <span class="tour-msg" id="tour-msg">…</span>
-        </div>
-
-        <div class="verdict-hero idle" id="verdict-hero">
-          <div class="vh-badge"><span id="vh-code">—</span></div>
-          <div class="vh-body">
-            <div class="vh-title" id="vh-title">Session replay off</div>
-            <div class="vh-sub" id="vh-sub">
-              Turn Session replay on to record — the server admits chunks only with
-              consent on file.
-            </div>
-          </div>
-        </div>
-
-        <div id="activity-sink" class="sr-only" aria-hidden="true"></div>
       </section>
 
       <!-- ==================== Core capture (always on) ==================== -->
