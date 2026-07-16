@@ -32,6 +32,13 @@ top-level grouping instead.
   click-to-copy.
 
 ### Changed
+- **Reorganized the demo page + widget polish.** Sections now read top-to-bottom
+  **Core capture** (badge: *Automatic · no code*) → **Explicit capture** (badge:
+  *Your code*, a `rt.track()` example) → **Record an issue** (bottom), which opens
+  the widget from a page button. The report widget mounts as a compact **icon**
+  launcher (`launcher: 'icon'`) with a **consent notice + Privacy Policy link**
+  above Record; Submit now disables immediately + confirms + auto-closes; the
+  controls bar is draggable.
 - **Reworked the demo into a user-driven record → review → submit flow.** The
   consent-gated section (the `Session replay` toggle, guided demo, and live
   verdict hero) is gone; recording is now driven from the SDK's **report widget

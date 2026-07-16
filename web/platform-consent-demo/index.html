@@ -26,32 +26,45 @@
         </div>
       </header>
 
-      <!-- ==================== Record an issue ==================== -->
+      <!-- ==================== Core capture (automatic) ==================== -->
       <section class="actions">
-        <h2>Record an issue</h2>
+        <h2>Core capture <span class="badge badge-auto">Automatic · no code</span></h2>
         <p class="hint lead">
-          Open <strong>Report / record an issue</strong> (bottom-right) and press
-          <strong>Record</strong>. A red frame around the screen means you're
-          recording. <span id="tier-note"></span>
-          When you're happy, press <strong>Submit</strong> — only then do the
-          clips upload; <strong>Discard</strong> throws them away.
-        </p>
-      </section>
-
-      <!-- ==================== Core capture (always on) ==================== -->
-      <section class="actions">
-        <h2>Core capture</h2>
-        <p class="hint lead">
-          Events and errors are captured automatically and flow to the portal
-          <strong>regardless of replay consent</strong> — only the rich session
-          <em>replay</em> above is consent-gated. No <code>capture()</code> call
-          needed; try one and watch it land in the portal timeline:
+          Errors and failed API calls are captured <strong>automatically</strong>
+          and flow to the portal — no <code>capture()</code> call in your code.
+          Try one and watch it land in the portal timeline:
         </p>
         <div class="button-row">
           <button id="btn-throw-error">Throw a JS error</button>
           <button id="btn-fetch-fail">Failed API call</button>
         </div>
         <p class="capture-note" id="capture-note" aria-live="polite">&nbsp;</p>
+      </section>
+
+      <!-- ==================== Explicit capture (you call the SDK) ========== -->
+      <section class="actions">
+        <h2>Explicit capture <span class="badge badge-code">Your code</span></h2>
+        <p class="hint lead">
+          Auto-capture is free, but you also record your own domain events by
+          calling the SDK — e.g. <code>rt.track('checkout.completed', {…})</code>.
+        </p>
+        <div class="button-row">
+          <button id="btn-track">Track a custom event</button>
+        </div>
+        <p class="capture-note" id="track-note" aria-live="polite">&nbsp;</p>
+      </section>
+
+      <!-- ==================== Record an issue (widget) ==================== -->
+      <section class="actions">
+        <h2>Record an issue</h2>
+        <p class="hint lead">
+          Reproduce the problem while recording, review the clips, and submit only
+          what you want — <strong>nothing uploads until you press Submit</strong>.
+          <span id="tier-note"></span>
+        </p>
+        <div class="button-row">
+          <button id="btn-open-recorder">Report / record an issue</button>
+        </div>
       </section>
 
     </main>
