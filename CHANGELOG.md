@@ -32,6 +32,16 @@ top-level grouping instead.
   click-to-copy.
 
 ### Changed
+- **Reworked the demo into a user-driven record → review → submit flow.** The
+  consent-gated section (the `Session replay` toggle, guided demo, and live
+  verdict hero) is gone; recording is now driven from the SDK's **report widget
+  in `record` mode** — a Record button, a full-screen red recording frame, and
+  pause / curate / submit controls. Replay is **buffered locally and uploaded
+  only on Submit** (`autoCapture.replay.mode: 'review'`); Discard drops it. The
+  widget is **tier-adaptive**: Platform unlocks multi-clip curation and records
+  consent on the Record click (`POST /api/consent`, so the managed server admits
+  the submit); OSS records the whole session as one clip with no consent step.
+  Supersedes the consent-toggle / guided-demo iterations below.
 - Removed the redundant `PLATFORM` badges from the Platform demo.
 - **Simplified the Platform demo to its essence.** Merged the two switches
   (consent + record) into **one** `Session replay` toggle — one click records
