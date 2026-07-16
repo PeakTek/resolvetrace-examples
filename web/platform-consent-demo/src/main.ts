@@ -102,8 +102,11 @@ const widgetClient: ReportWidgetClient = {
   },
 };
 
-mountReportWidget(widgetClient, {
+const widget = mountReportWidget(widgetClient, {
   record: { clips: platform ? 'multi' : 'single' },
+  // Compact floating icon; the page also opens it from the "Record an issue"
+  // section button below (the widget is developer-triggered).
+  launcher: 'icon',
   // Against a managed backend the Record click records consent server-side, so
   // the server admits the later submit. Fail-closed: if the consent POST
   // throws, recording never starts. An OSS backend admits replay without one → omit.
@@ -116,7 +119,15 @@ mountReportWidget(widgetClient, {
   recordButtonText: 'Record',
   submitClipsText: 'Submit',
   discardText: 'Discard',
+  // Consent notice + policy link above the Record button. Swap policyUrl for a
+  // real Privacy Policy / Terms URL.
+  consentNotice: 'Submitting a recording means you consent to it being captured.',
+  policyUrl: 'https://resolvetrace.com/privacy',
+  policyLinkText: 'Privacy Policy',
 });
+
+// The "Record an issue" section button opens the widget (developer-triggered).
+$<HTMLButtonElement>('btn-open-recorder').addEventListener('click', () => widget.open());
 
 // --- Core capture (always on, independent of replay) -----------------------
 // Events and errors are captured + sent regardless of replay; these work on any
@@ -135,6 +146,16 @@ $<HTMLButtonElement>('btn-fetch-fail').addEventListener('click', () => {
   void fetch(`${config.endpoint}/__demo_missing__/${Date.now()}`).catch(() => {
     /* swallow — the SDK's api source records the error.api outcome */
   });
+});
+
+// --- Explicit capture (you call the SDK) -----------------------------------
+// In contrast to core capture, this is a call you write yourself.
+const trackNote = $('track-note');
+let trackN = 0;
+$<HTMLButtonElement>('btn-track').addEventListener('click', () => {
+  trackN += 1;
+  rt.track('demo.custom_event', { source: 'explicit-capture-demo', n: trackN });
+  trackNote.textContent = `✓ rt.track('demo.custom_event', …) sent (#${trackN}). See the portal timeline.`;
 });
 
 // --- Best-effort flush on hide (keep the session across a refresh) ----------

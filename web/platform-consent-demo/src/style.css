@@ -283,6 +283,15 @@ button.secondary:hover:not(:disabled) { border-color: var(--accent); filter: non
   border-radius: 999px;
   color: var(--accent-ink);
   background: var(--accent);
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+/* "Automatic" (auto-captured, no code) vs "Your code" (explicit SDK calls). */
+.badge-auto { color: var(--accent-ink); background: var(--accept); }
+.badge-code {
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
 }
 .tier {
   font-size: 0.62rem;
