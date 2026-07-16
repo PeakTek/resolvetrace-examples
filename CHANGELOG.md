@@ -9,6 +9,12 @@ top-level grouping instead.
 
 ## [Unreleased]
 
+## [2026-07-16] — v0.3.0
+
+The `web/platform-consent-demo` becomes a user-driven **record → review →
+submit** demo built on the SDK's record-mode report widget (contract v0.3.0),
+tier-adaptive (Platform multi-clip curation vs. OSS whole-session).
+
 ### Fixed
 - **Platform demo verdict hero stayed out of sync.** The hero now ignores replay
   verdicts that no longer apply — none while stopped (so it no longer stuck at
