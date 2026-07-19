@@ -38,6 +38,37 @@ export interface RuntimeConfig {
 interface InjectedConfig {
   endpoint?: unknown;
   apiKey?: unknown;
+  /** Optional branding (see `Branding`) — lets one built image serve
+   * differently-branded deployments purely via config.js. */
+  brandName?: unknown;
+  accent?: unknown;
+  tagline?: unknown;
+}
+
+/**
+ * Optional per-deployment branding injected via `config.js`. All fields are
+ * optional; absent fields keep the stock look, so existing deployments are
+ * unaffected.
+ */
+export interface Branding {
+  /** Product/company name shown as the page title + heading. */
+  brandName: string | null;
+  /** Accent color (any CSS color) applied to the `--accent` variable. */
+  accent: string | null;
+  /** Short line rendered under the heading. */
+  tagline: string | null;
+}
+
+/** Read the injected branding synchronously (config.js runs before us). */
+export function resolveBranding(): Branding {
+  const injected = window.__RT_CONFIG__;
+  const str = (v: unknown): string | null =>
+    typeof v === 'string' && v.trim().length > 0 ? v : null;
+  return {
+    brandName: str(injected?.brandName),
+    accent: str(injected?.accent),
+    tagline: str(injected?.tagline),
+  };
 }
 
 declare global {

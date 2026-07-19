@@ -20,8 +20,34 @@ import {
   type ReportWidgetClient,
 } from '@peaktek/resolvetrace-sdk';
 import { probeCapabilities } from './capabilities';
+import { resolveBranding } from './config';
 import { $, buildClient, makeLogger } from './client';
 import { rawFetch } from './raw-fetch';
+
+// --- Branding (optional, injected via config.js) ----------------------------
+// Applied synchronously before anything async so a branded deployment never
+// flashes the stock look. Absent fields keep the defaults, so unbranded
+// deployments are unchanged.
+const brand = resolveBranding();
+if (brand.brandName) {
+  document.title = brand.brandName;
+  const h1 = document.querySelector('.header-top h1');
+  if (h1) h1.textContent = brand.brandName;
+}
+if (brand.accent) {
+  // Inline custom property wins over every theme block, so one accent applies
+  // across light/dark — pick a brand color that reads on both.
+  document.documentElement.style.setProperty('--accent', brand.accent);
+}
+if (brand.tagline) {
+  const subtitle = document.querySelector('header .subtitle');
+  if (subtitle) {
+    const tagline = document.createElement('p');
+    tagline.className = 'tagline';
+    tagline.textContent = brand.tagline;
+    subtitle.before(tagline);
+  }
+}
 
 const log = makeLogger();
 const caps = await probeCapabilities();
