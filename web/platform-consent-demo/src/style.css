@@ -136,6 +136,13 @@ h1 {
   gap: 0.6rem;
   flex-wrap: wrap;
 }
+/* Optional brand tagline (rendered above the subtitle when configured). */
+.tagline {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 2px;
+  font-size: 0.95rem;
+}
 .subtitle {
   color: var(--muted);
   margin: 0;
