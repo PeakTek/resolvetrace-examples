@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nimbus Supply Co. — ResolveTrace demo</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" data-link>🛰️ Nimbus Supply Co.</a>
+      <nav class="nav">
+        <a href="/" data-link>Home</a>
+        <a href="/products" data-link>Shop</a>
+        <a href="/cart" data-link>Cart <span id="cart-count" class="cart-count">0</span></a>
+        <a href="/order" data-link>Order status</a>
+      </nav>
+      <div class="session">
+        <span class="session-label">Support code</span>
+        <code id="support-code">(starting…)</code>
+        <span id="replay-badge" class="replay-badge" title="Whole-session masked replay is recording">● REC</span>
+      </div>
+    </header>
+
+    <!-- Thin transport-status strip: the demo talks to a ResolveTrace ingest
+         server; if none is reachable this shows the SDK's onError so the demo
+         still makes sense offline. -->
+    <div id="status-strip" class="status-strip" hidden></div>
+
+    <!-- Client-side route outlet. The whole point of the SPA: navigating
+         between routes never reloads the page, so session replay records the
+         transitions as one continuous recording. -->
+    <main id="app" class="app"></main>
+
+    <footer class="footer">
+      <p>
+        A <strong>deliberately buggy</strong> demo storefront for
+        <code>@peaktek/resolvetrace-sdk</code>. Click things — JS errors, failed
+        API calls, and your navigation are all captured automatically. Use the
+        floating <em>Report a problem</em> button to file a user report.
+      </p>
+    </footer>
+
+    <!-- Runtime config, written from container env at startup (see serve.mjs).
+         In `npm run dev` this is the dev placeholder from /public/config.js. -->
+    <script src="/config.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

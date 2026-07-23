@@ -86,6 +86,41 @@ jobs:
         working-directory: resolvetrace-examples/web/platform-consent-demo
         run: npm run build
 
+  web-vite-storefront-ts:
+    name: web/vite-storefront-ts — typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v6
+        with:
+          path: resolvetrace-examples
+
+      - name: Checkout contract (for SDK source)
+        uses: actions/checkout@v6
+        with:
+          repository: PeakTek/resolvetrace-contract
+          path: resolvetrace-contract
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install SDK source deps
+        working-directory: resolvetrace-contract/sdk/typescript
+        run: npm ci --no-audit --no-fund
+
+      - name: Install deps
+        working-directory: resolvetrace-examples/web/vite-storefront-ts
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: resolvetrace-examples/web/vite-storefront-ts
+        run: npm run typecheck
+
+      - name: Build
+        working-directory: resolvetrace-examples/web/vite-storefront-ts
+        run: npm run build
+
   docker:
     name: web/vite-vanilla-ts — docker build
     runs-on: ubuntu-latest
@@ -111,3 +146,29 @@ jobs:
           file: resolvetrace-examples/web/vite-vanilla-ts/Dockerfile
           push: false
           tags: resolvetrace-examples-web-vite-vanilla-ts:ci
+
+  docker-storefront:
+    name: web/vite-storefront-ts — docker build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout examples
+        uses: actions/checkout@v6
+        with:
+          path: resolvetrace-examples
+
+      - name: Checkout contract (build context sibling)
+        uses: actions/checkout@v6
+        with:
+          repository: PeakTek/resolvetrace-contract
+          path: resolvetrace-contract
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: resolvetrace-examples/web/vite-storefront-ts/Dockerfile
+          push: false
+          tags: resolvetrace-examples-web-vite-storefront-ts:ci
