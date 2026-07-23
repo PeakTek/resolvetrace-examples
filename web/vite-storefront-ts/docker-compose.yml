@@ -1,0 +1,40 @@
+# One-command local / cloud deploy for the storefront demo.
+#
+#   cd web/vite-storefront-ts
+#   cp .env.example .env    # edit to point at your ingest server
+#   docker compose up --build
+#
+# The build context is the parent workspace (three levels up) because the
+# Dockerfile needs `resolvetrace-contract/sdk/typescript` for the SDK source —
+# until the SDK is published to npm, resolvetrace-contract MUST be cloned as a
+# sibling of resolvetrace-examples.
+#
+# The image bakes nothing environment-specific: it reads its endpoint + key at
+# runtime from container env (written into config.js at startup).
+
+services:
+  storefront-demo:
+    build:
+      # From web/vite-storefront-ts/ → web/ → resolvetrace-examples/ → workspace
+      context: ../../..
+      dockerfile: resolvetrace-examples/web/vite-storefront-ts/Dockerfile
+    image: resolvetrace-example-vite-storefront-ts:local
+    container_name: resolvetrace-storefront-demo
+    environment:
+      # events:write-only key — browser-exposed by design. Defaults match
+      # resolvetrace-core's deploy/docker-compose.yml (zero-config local run).
+      RT_INGEST_ENDPOINT: ${RT_INGEST_ENDPOINT:-http://localhost:4317}
+      RT_PUBLIC_TENANT_KEY: ${RT_PUBLIC_TENANT_KEY:-replace-me-with-long-random-string}
+    ports:
+      - "${DEMO_PORT:-8080}:8080"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
