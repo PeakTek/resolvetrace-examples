@@ -9,6 +9,19 @@ top-level grouping instead.
 
 ## [Unreleased]
 
+### Changed
+- **`web/vite-storefront-ts` gains multi-clip record mode.** The deliberately
+  buggy storefront's **Report a problem** widget now runs in record mode —
+  `autoCapture.replay.mode: 'review'` + `reportWidget: { record: { clips: 'multi' } }`
+  — so a user records, pauses/resumes to capture several masked clips, removes any
+  they don't want, and submits them with the report (buffered locally, uploaded
+  only on Submit; Discard drops them). This replaces the previous automatic
+  whole-session replay; JS/API-error auto-capture is unchanged, and a clip
+  recorded across routes still stays one continuous recording (the SPA rationale).
+  Pure client config — the SDK wires the widget recorder onto `client.replay.*`,
+  no imperative mount. The tenant's replay policy must be `auto` for the clip
+  uploads to be accepted (no consent step, unlike `platform-consent-demo`).
+
 ## [2026-07-16] — v0.3.0
 
 The `web/platform-consent-demo` becomes a user-driven **record → review →

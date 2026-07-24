@@ -81,7 +81,9 @@ a { color: inherit; }
 .session code { background: var(--bg); border: 1px solid var(--line); padding: 0.1rem 0.4rem; border-radius: 6px; color: var(--ink); }
 .replay-badge {
   display: inline-flex; align-items: center; gap: 0.25rem;
-  color: var(--danger); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.03em;
+  color: var(--brand); font-weight: 600; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.1rem 0.5rem;
+  cursor: default;
 }
 @media (min-width: 720px) { .session-label { display: inline; } }
 
