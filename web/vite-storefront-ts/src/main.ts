@@ -47,10 +47,12 @@ const apiKey =
 // The whole integration. Auto-capture (JS + API errors) is on by default, so
 // there is nothing to configure for exceptions. The report widget runs in
 // RECORD mode: replay is `review` (spans are buffered locally and uploaded only
-// on Submit), and `clips: 'multi'` lets the user pause/resume to capture several
-// masked clips and remove any before submitting. maskAllText:false keeps static
-// page text readable; form INPUTS are always masked. The SDK wires the widget's
-// recorder onto client.replay.* from this config — no extra app code.
+// on Submit). `record: true` opts in — the SERVER decides how many clips the
+// widget offers: a single clip against OSS core, or pause/resume multi-clip
+// curation when the backend advertises it (a Platform tenant). No client change
+// switches between them. maskAllText:false keeps static page text readable; form
+// INPUTS are always masked. The SDK wires the widget's recorder onto
+// client.replay.* from this config — no extra app code.
 const rt: ResolveTraceClient = createClient({
   apiKey,
   endpoint,
@@ -59,7 +61,7 @@ const rt: ResolveTraceClient = createClient({
     replay: { mode: 'review', enabled: true, sampleRate: 1, maskAllText: false },
   },
   reportWidget: {
-    record: { clips: 'multi' },
+    record: true,
     buttonText: 'Report a problem',
     recordButtonText: 'Record the issue',
     submitClipsText: 'Submit',

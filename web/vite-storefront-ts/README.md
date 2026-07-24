@@ -7,27 +7,36 @@ takes to get the SDK's headline value:
 - **Automatic exception capture** — uncaught JS errors (`error.js`) and failed
   API calls (`error.api`) are captured with **no per-event code**. Auto-capture
   is on by default; the app never calls `capture()` for any of its bugs.
-- **User-reported issues with recorded replay clips** — the floating **Report a
+- **User-reported issues with a recorded replay** — the floating **Report a
   problem** widget runs in **record mode**: the user hits **Record**, reproduces
-  the bug (browsing across routes if they like), can **pause/resume to capture
-  several clips** and remove any they don't want, then **Submit** to send them —
-  or **Discard**. Nothing leaves the browser until Submit. There's also an inline
-  "Report this problem" button after a failed checkout (`client.reportProblem(...)`)
-  and the session's **support code** in the header.
-- **Masked session replay** — the recorded clips are masked (form inputs never
-  leave the browser); a clip recorded while navigating captures the page-to-page
+  the bug (browsing across routes if they like), then **Submit** to send the
+  recording — or **Discard**. Nothing leaves the browser until Submit. There's
+  also an inline "Report this problem" button after a failed checkout
+  (`client.reportProblem(...)`) and the session's **support code** in the header.
+- **A live OSS-vs-Platform differentiator, with no client change** — the widget
+  adapts to whatever the **backend** advertises at session-start. Against the
+  **OSS core** it records **a single clip** (the whole session). Against a
+  **Platform tenant** with multi-clip granted, the same build unlocks
+  **pause/resume multi-clip curation** — capture several masked clips and remove
+  any before Submit. The SDK reads the server capability; the app configures
+  nothing, and OSS code can't flip it on.
+- **Masked session replay** — the recording is masked (form inputs never leave
+  the browser); a clip recorded while navigating captures the page-to-page
   transitions as one continuous recording.
 
 The app is intentionally broken so there is something real to capture. The whole
 SDK integration is the single `createClient(...)` in [`src/main.ts`](src/main.ts)
 — replay uses `autoCapture.replay.mode: 'review'` (buffer locally, upload on
-Submit) and `reportWidget: { record: { clips: 'multi' } }` (the SDK wires the
-record UI onto `client.replay.*` for you; no extra app code).
+Submit) and `reportWidget: { record: true }` (the SDK wires the record UI onto
+`client.replay.*` for you and adapts single- vs multi-clip to the backend; no
+extra app code).
 
 > **Deployment note:** for the clip uploads to be accepted, the tenant's replay
 > policy must be **`auto`** (spin it with `--replay auto`, per the platform
 > runbook). Only the consent-gated `manual` policy would require recorded consent
-> — which this non-consent demo doesn't do.
+> — which this non-consent demo doesn't do. Multi-clip curation additionally
+> requires a backend that advertises it (a Platform tenant with multi-clip
+> enabled); against OSS core the widget stays single-clip.
 
 ## Why a single-page app (this is the important part)
 

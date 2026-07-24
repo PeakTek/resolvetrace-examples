@@ -10,17 +10,23 @@ top-level grouping instead.
 ## [Unreleased]
 
 ### Changed
-- **`web/vite-storefront-ts` gains multi-clip record mode.** The deliberately
-  buggy storefront's **Report a problem** widget now runs in record mode —
-  `autoCapture.replay.mode: 'review'` + `reportWidget: { record: { clips: 'multi' } }`
-  — so a user records, pauses/resumes to capture several masked clips, removes any
-  they don't want, and submits them with the report (buffered locally, uploaded
-  only on Submit; Discard drops them). This replaces the previous automatic
-  whole-session replay; JS/API-error auto-capture is unchanged, and a clip
-  recorded across routes still stays one continuous recording (the SPA rationale).
-  Pure client config — the SDK wires the widget recorder onto `client.replay.*`,
-  no imperative mount. The tenant's replay policy must be `auto` for the clip
-  uploads to be accepted (no consent step, unlike `platform-consent-demo`).
+- **`web/vite-storefront-ts` record mode is now a live OSS-vs-Platform
+  differentiator.** The deliberately buggy storefront's **Report a problem**
+  widget runs in record mode — `autoCapture.replay.mode: 'review'` +
+  `reportWidget: { record: true }` — so a user records, then submits the
+  recording with the report (buffered locally, uploaded only on Submit; Discard
+  drops it). The number of clips is now decided by the **backend**, not the app:
+  against **OSS core** the widget records a **single clip** (the whole session);
+  against a **Platform tenant** with multi-clip granted, the **same build**
+  unlocks **pause/resume multi-clip curation** (capture several masked clips,
+  remove any before Submit). The SDK reads the server capability advertised at
+  session-start and adapts with **no client change** — and OSS code can't flip it
+  on. JS/API-error auto-capture is unchanged, and a clip recorded across routes
+  still stays one continuous recording (the SPA rationale). Pure client config —
+  the SDK wires the widget recorder onto `client.replay.*`, no imperative mount.
+  The tenant's replay policy must be `auto` for the clip uploads to be accepted
+  (no consent step, unlike `platform-consent-demo`); requires SDK ≥ contract
+  v0.4.0.
 
 ## [2026-07-16] — v0.3.0
 
