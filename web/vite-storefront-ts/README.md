@@ -7,14 +7,27 @@ takes to get the SDK's headline value:
 - **Automatic exception capture** — uncaught JS errors (`error.js`) and failed
   API calls (`error.api`) are captured with **no per-event code**. Auto-capture
   is on by default; the app never calls `capture()` for any of its bugs.
-- **User-reported issues** — a floating **Report a problem** widget, plus an
-  inline "Report this problem" button after a failed checkout that calls
-  `client.reportProblem(...)` and shows the session's **support code**.
-- **Session replay** — whole-session masked replay that records the shopper's
-  journey **including the page-to-page navigation** as one continuous recording.
+- **User-reported issues with recorded replay clips** — the floating **Report a
+  problem** widget runs in **record mode**: the user hits **Record**, reproduces
+  the bug (browsing across routes if they like), can **pause/resume to capture
+  several clips** and remove any they don't want, then **Submit** to send them —
+  or **Discard**. Nothing leaves the browser until Submit. There's also an inline
+  "Report this problem" button after a failed checkout (`client.reportProblem(...)`)
+  and the session's **support code** in the header.
+- **Masked session replay** — the recorded clips are masked (form inputs never
+  leave the browser); a clip recorded while navigating captures the page-to-page
+  transitions as one continuous recording.
 
 The app is intentionally broken so there is something real to capture. The whole
-SDK integration is the single `createClient(...)` in [`src/main.ts`](src/main.ts).
+SDK integration is the single `createClient(...)` in [`src/main.ts`](src/main.ts)
+— replay uses `autoCapture.replay.mode: 'review'` (buffer locally, upload on
+Submit) and `reportWidget: { record: { clips: 'multi' } }` (the SDK wires the
+record UI onto `client.replay.*` for you; no extra app code).
+
+> **Deployment note:** for the clip uploads to be accepted, the tenant's replay
+> policy must be **`auto`** (spin it with `--replay auto`, per the platform
+> runbook). Only the consent-gated `manual` policy would require recorded consent
+> — which this non-consent demo doesn't do.
 
 ## Why a single-page app (this is the important part)
 
@@ -24,12 +37,12 @@ with **client-side routes**, not separate HTML pages — on purpose.
 The SDK keeps one session across a full page reload (the session id lives in
 `sessionStorage`), **but the replay chunk sequence is in-memory only** and
 restarts at `0` on every reload. The server keys replay chunks by
-`(tenant, session, sequence)` and overwrites on a repeat — so a classic
-multi-page app would have each new page's chunks *overwrite* the previous page's,
-corrupting the replay. A client-side-routed SPA keeps one JS context, so replay
-is a single continuous recording and the route changes show up as live DOM
-mutations. That is why this example routes on the client (History API, see
-[`src/router.ts`](src/router.ts)).
+`(tenant, session, sequence)` and overwrites on a repeat — so if a recorded clip
+spanned a full page load, the second page's chunks would *overwrite* the first's
+and corrupt the clip. A client-side-routed SPA keeps one JS context, so a clip
+recorded while the user navigates stays a single continuous recording and the
+route changes show up as live DOM mutations. That is why this example routes on
+the client (History API, see [`src/router.ts`](src/router.ts)).
 
 ## The intentional bugs
 
