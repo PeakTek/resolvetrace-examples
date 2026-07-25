@@ -63,13 +63,13 @@ export function renderCheckout(ctx: PageContext): void {
         }),
       });
       if (!res.ok) {
-        showFailure(ctx, result, res.status);
+        showFailure(result, res.status);
         return;
       }
       clearCart();
       result.innerHTML = `<div class="ok">Payment complete 🎉</div>`;
     } catch {
-      showFailure(ctx, result, 0);
+      showFailure(result, 0);
     } finally {
       btn.disabled = false;
       btn.textContent = `Pay ${money(total)}`;
@@ -77,7 +77,7 @@ export function renderCheckout(ctx: PageContext): void {
   });
 }
 
-function showFailure(ctx: PageContext, result: HTMLElement, status: number): void {
+function showFailure(result: HTMLElement, status: number): void {
   const detail = status ? `HTTP ${status}` : 'network error';
   result.innerHTML = `
     <div class="fail">
@@ -86,21 +86,5 @@ function showFailure(ctx: PageContext, result: HTMLElement, status: number): voi
         returned an error. This was captured automatically as an
         <code>error.api</code> breadcrumb — no code in this page reports it.
       </p>
-      <button class="btn" id="report-issue">Report this problem</button>
-      <div id="report-ack" class="report-ack"></div>
     </div>`;
-
-  // User-reported issue: reportProblem() emits a `support.report_submitted`
-  // event carrying this session's support code, so support can pull up exactly
-  // this session — the failed call and the replay of what led to it.
-  $('#report-issue', ctx.outlet).addEventListener('click', () => {
-    ctx.rt.reportProblem({
-      description: 'Checkout failed when I clicked Pay — the payment never went through.',
-    });
-    const code = ctx.rt.session.supportCode;
-    const ack = $('#report-ack', ctx.outlet);
-    ack.innerHTML = code
-      ? `Thanks — report sent. Your support code is <code>${esc(code)}</code>.`
-      : `Thanks — report sent. (A support code is minted once the session reaches the server.)`;
-  });
 }

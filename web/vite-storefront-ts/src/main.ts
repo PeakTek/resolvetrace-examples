@@ -66,7 +66,6 @@ const rt: ResolveTraceClient = createClient({
     recordButtonText: 'Record the issue',
     submitClipsText: 'Submit',
     discardText: 'Discard',
-    consentNotice: 'Recordings are masked — form fields never leave your browser.',
   },
   onError(err) {
     // With no ingest server reachable, uploads fail — but capture still runs in

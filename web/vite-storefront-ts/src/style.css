@@ -79,12 +79,6 @@ a { color: inherit; }
 .session { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); }
 .session-label { display: none; }
 .session code { background: var(--bg); border: 1px solid var(--line); padding: 0.1rem 0.4rem; border-radius: 6px; color: var(--ink); }
-.replay-badge {
-  display: inline-flex; align-items: center; gap: 0.25rem;
-  color: var(--brand); font-weight: 600; font-size: 0.72rem;
-  border: 1px solid var(--line); border-radius: 999px; padding: 0.1rem 0.5rem;
-  cursor: default;
-}
 @media (min-width: 720px) { .session-label { display: inline; } }
 
 .status-strip {
@@ -198,8 +192,6 @@ a { color: inherit; }
 .hint { font-size: 0.82rem; color: var(--muted); }
 .ok { background: var(--ok-bg); color: var(--ok); border-radius: 10px; padding: 1rem; margin-top: 1rem; font-weight: 600; }
 .fail { background: var(--danger-bg); border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line)); border-radius: 10px; padding: 1rem 1.1rem; margin-top: 1.25rem; }
-.fail .btn { margin-top: 0.5rem; }
-.report-ack { margin-top: 0.6rem; font-size: 0.9rem; color: var(--muted); }
 .track-result { margin-top: 1rem; color: var(--muted); }
 
 /* --- toasts -------------------------------------------------------------- */

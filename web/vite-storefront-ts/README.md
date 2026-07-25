@@ -10,9 +10,8 @@ takes to get the SDK's headline value:
 - **User-reported issues with a recorded replay** — the floating **Report a
   problem** widget runs in **record mode**: the user hits **Record**, reproduces
   the bug (browsing across routes if they like), then **Submit** to send the
-  recording — or **Discard**. Nothing leaves the browser until Submit. There's
-  also an inline "Report this problem" button after a failed checkout
-  (`client.reportProblem(...)`) and the session's **support code** in the header.
+  recording — or **Discard**. Nothing leaves the browser until Submit. The
+  session's **support code** shows in the header.
 - **A live OSS-vs-Platform differentiator, with no client change** — the widget
   adapts to whatever the **backend** advertises at session-start. Against the
   **OSS core** it records **a single clip** (the whole session). Against a
